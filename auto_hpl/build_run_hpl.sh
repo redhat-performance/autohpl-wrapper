@@ -40,13 +40,13 @@ tools_git=https://github.com/dvalinrh/test_tools
 
 usage()
 {
-  echo Usage $1:
-  echo "  --mem_size <value>:"
-  echo "  --use_mkl"
-  echo "  --use_blis"
-  echo "  --regression"
-  source test_tools/general_setup --usage
-  exit
+	echo Usage $1:
+	echo "  --mem_size <value>:"
+	echo "  --use_mkl"
+	echo "  --use_blis"
+	echo "  --regression"
+	source test_tools/general_setup --usage
+	exit
 }
 
 found=0
