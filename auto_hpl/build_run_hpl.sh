@@ -612,7 +612,7 @@ if [ $to_pbench -eq 1 ];then
   	cd /tmp
   	cp results_auto_hpl_${to_tuned_setting}.tar results_pbench_auto_hpl_${to_tuned_setting}.tar
 else
-	for iteration in 0 `seq 1 1 ${iterations}`; do
+	for iteration in 0 `seq 1 1 ${to_times_to_run}`; do
   		install_run_hpl
 
   		pushd /tmp/results_auto_hpl_${to_tuned_setting} > /dev/null
