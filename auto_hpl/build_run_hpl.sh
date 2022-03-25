@@ -40,13 +40,13 @@ tools_git=https://github.com/dvalinrh/test_tools
 
 usage()
 {
-  echo Usage $1:
-  echo "  --mem_size <value>:"
-  echo "  --use_mkl"
-  echo "  --use_blis"
-  echo "  --regression"
-  source test_tools/general_setup --usage
-  exit
+	echo Usage $1:
+	echo "  --mem_size <value>:"
+	echo "  --use_mkl"
+	echo "  --use_blis"
+	echo "  --regression"
+	source test_tools/general_setup --usage
+	exit
 }
 
 found=0
@@ -603,24 +603,30 @@ rm /tmp/results_auto_hpl_${to_tuned_setting} 2> /dev/null
 mkdir ${RESULTSDIR}
 ln -s ${RESULTSDIR} /tmp/results_auto_hpl_${to_tuned_setting}
 
+run_times=0
+
 if [ $to_pbench -eq 1 ];then
-  source ~/.bashrc
+	source ~/.bashrc
 
-  $TOOLS_BIN/execute_pbench --cmd_executing "$0" $arguments --test auto_hpl --spacing 11
-  cd /tmp
-  cp results_auto_hpl_${to_tuned_setting}.tar results_pbench_auto_hpl_${to_tuned_setting}.tar
+  	$TOOLS_BIN/execute_pbench --cmd_executing "$0" $arguments --test auto_hpl --spacing 11
+  	cd /tmp
+  	cp results_auto_hpl_${to_tuned_setting}.tar results_pbench_auto_hpl_${to_tuned_setting}.tar
 else
-  install_run_hpl
+	for iteration in 0 `seq 1 1 ${iterations}`; do
+  		install_run_hpl
 
-  cd /tmp/results_auto_hpl_${to_tuned_setting}
-  pwd
-  for results in `ls -d *log`; do
-	echo results $results
-	  out_file=`echo $results | sed "s/\.log/\.csv/g"`
-	  cat $results | tr -s ' ' | sed "s/^ //g" | sed "s/ /:/g" > $out_file
-  done
-  cd /tmp
-  tar hcf results_auto_hpl_${to_tuned_setting}.tar results_auto_hpl_${to_tuned_setting}
+  		pushd /tmp/results_auto_hpl_${to_tuned_setting} > /dev/null
+		rdir=results_${iteration}
+		mkdir $rdir
+		mv hpl* $rdir
+		cd $rdir
+  		for results in `ls -d *log`; do
+	  		out_file=`echo $results | sed "s/\.log/\.csv/g"`
+	  		cat $results | tr -s ' ' | sed "s/^ //g" | sed "s/ /:/g" > $out_file
+  		done
+	done
+	cd /tmp
+	tar hcf results_auto_hpl_${to_tuned_setting}.tar results_auto_hpl_${to_tuned_setting}
 fi
 exit 0
 
