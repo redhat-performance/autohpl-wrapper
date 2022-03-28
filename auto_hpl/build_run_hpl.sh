@@ -619,7 +619,7 @@ if [ $to_pbench -eq 1 ];then
   	cd /tmp
   	cp results_auto_hpl_${to_tuned_setting}.tar results_pbench_auto_hpl_${to_tuned_setting}.tar
 else
-	for iteration in 0 `seq 1 1 ${to_times_to_run}`; do
+	for iteration in 1 `seq 1 1 ${to_times_to_run}`; do
   		install_run_hpl
   		pushd /tmp/results_auto_hpl_${to_tuned_setting} > /dev/null
 		rdir=results_${iteration}
@@ -631,7 +631,9 @@ else
 	  		cat $results | tr -s ' ' | sed "s/^ //g" | sed "s/ /:/g" > $out_file
   		done
 		if [ $sleep_for -ne 0 ];then
-			sleep $sleep_for
+			if [ $iteration -ne $to_times_to_run ]; then
+				sleep $sleep_for
+			fi
 		fi
 	done
 	cd /tmp
