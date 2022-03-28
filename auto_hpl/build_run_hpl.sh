@@ -565,6 +565,7 @@ while [[ $# -gt 0 ]]; do
     ;;
     --sleep_between_runs)
       sleep_for=${2}
+      shift 2
     ;;
     --usage)
       usage $0
