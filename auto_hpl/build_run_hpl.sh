@@ -37,14 +37,16 @@ AMD_BLIS_DIR=$run_dir/amd/blis
 HPL_PATH=$run_dir/hpl
 SCRIPT_DIR=$run_dir
 tools_git=https://github.com/dvalinrh/test_tools
+sleep_for=0
 
 usage()
 {
 	echo Usage $1:
-	echo "  --mem_size <value>:"
-	echo "  --use_mkl"
-	echo "  --use_blis"
-	echo "  --regression"
+	echo "  --mem_size <value>: desginate the size of memory to work with"
+	echo "  --sleep_between_runs <value>: sleep this number of seconds before stating to the next run."
+	echo "  --use_mkl: use the mkl lib"
+	echo "  --use_blis: use the blis lib"
+	echo "  --regression: limit the amount of memory for regression"
 	source test_tools/general_setup --usage
 	exit
 }
@@ -516,6 +518,7 @@ source test_tools/general_setup "$@"
 
 ARGUMENT_LIST=(
 	"mem_size"
+	"sleep_between_runs"
 )
 
 NO_ARGUMENTS=(
@@ -559,6 +562,9 @@ while [[ $# -gt 0 ]]; do
     --mem_size)
       mem_size=${2}
       shift 2
+    ;;
+    --sleep_between_runs)
+      sleep_for=${2}
     ;;
     --usage)
       usage $0
@@ -614,7 +620,6 @@ if [ $to_pbench -eq 1 ];then
 else
 	for iteration in 0 `seq 1 1 ${to_times_to_run}`; do
   		install_run_hpl
-
   		pushd /tmp/results_auto_hpl_${to_tuned_setting} > /dev/null
 		rdir=results_${iteration}
 		mkdir $rdir
@@ -624,6 +629,9 @@ else
 	  		out_file=`echo $results | sed "s/\.log/\.csv/g"`
 	  		cat $results | tr -s ' ' | sed "s/^ //g" | sed "s/ /:/g" > $out_file
   		done
+		if [ $sleep_for -ne 0 ];then
+			sleep $sleep_for
+		fi
 	done
 	cd /tmp
 	tar hcf results_auto_hpl_${to_tuned_setting}.tar results_auto_hpl_${to_tuned_setting}
