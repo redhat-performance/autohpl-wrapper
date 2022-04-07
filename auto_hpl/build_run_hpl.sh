@@ -102,6 +102,17 @@ fi
 # wrapper specific code.
 #
 
+expand_cpu_range() {
+  local IFS=,
+  set -- $1
+  for range; do
+    case $range in
+      *-*) for (( i=${range%-*}; i<=${range#*-}; i++ )); do echo $i; done ;;
+      *)   echo $range ;;
+    esac
+  done
+}
+
 size_platform()
 {
   LSCPU="$(mktemp /tmp/lscpu.XXXXXX)"
@@ -175,17 +186,13 @@ size_platform()
 
   # Just assume all CPUs are the same because if not, shoot me
   if [ -d /sys/devices/system/cpu/cpu0/cache/index3 ]; then
-    grep "," /sys/devices/system/cpu/cpu0/cache/index3/shared_cpu_list > /dev/null
-    if [[ $? -eq 0 ]]; then
-      # Comma-separated list
-      threadspl3=$(cat /sys/devices/system/cpu/cpu0/cache/index3/shared_cpu_list |sed s/,/\ /g|wc -w)
-      corespl3=$((threadspl3 / thpcore))
-    else
-      # Range
-      end=$(cut -d- -f 2 /sys/devices/system/cpu/cpu0/cache/index3/shared_cpu_list)
-      threadspl3=$((end + 1))
-      corespl3=$((threadspl3 / thpcore))
-    fi
+    cpulist=$(cat /sys/devices/system/cpu/cpu0/cache/index3/shared_cpu_list)
+    echo cpulist ${cpulist}
+    threadspl3=$(expand_cpu_range ${cpulist})
+    threadspl3=$(echo $threadspl3 | wc -w)
+    echo threadspl3 ${threadspl3}
+    corespl3=$((threadspl3 / thpcore))
+    echo corespl3 ${corespl3}
   else
     # Ampere's eMag & Altra *have* an L3 cache but doesn't present it via ACPI
     # so there's no entry in sysfs. :sadface: Fortunately they don't have SMT
@@ -199,7 +206,11 @@ size_platform()
     NUM_MPI_PROCESS_MT=$numl3s
   fi
   NUM_MPI_PROCESS_ST=$((corespnode * nodes)) #Default MPI rank for ST BLAS run
-  NOMP=$corespnode # Default OMP_NUM_THREADS
+  if [ -d /sys/devices/system/cpu/cpu0/cache/index3 ]; then
+    NOMP=$corespl3
+  else
+    NOMP=$corespnode # Default OMP_NUM_THREADS
+  fi
   # Another special case: Ampere eMag performs significantly better as
   # MPI only without OMP - like over 3x better.
   if [[ "$vendor" == "APM" && $model -eq 2 ]]; then
@@ -226,6 +237,9 @@ size_platform()
       NBS=224
     elif [[ $family -eq 25 && $model -eq 1 ]]; then
       # AMD Milan
+      NBS=224
+    elif [[ $family -eq 25 && $model -eq 16 ]]; then
+      # AMD Genoa
       NBS=224
     elif [[ $family -eq 6 ]]; then
       # Intel
