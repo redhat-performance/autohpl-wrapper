@@ -52,6 +52,7 @@ usage()
 }
 
 found=0
+usage_request=0
 for arg in "$@"; do
   if [ $found -eq 1 ]; then
     tools_git=$arg
@@ -66,8 +67,9 @@ for arg in "$@"; do
   # the common parsers then checking for usage here.  Doing so will
   # result in the script exiting with out giving the test options.
   #
+
   if [[ $arg == "--usage" ]]; then
-    usage $0
+    usage_request=1
   fi
 done
 
@@ -81,6 +83,10 @@ if [ ! -d "test_tools" ]; then
     echo pulling git $tools_git failed.
     exit
   fi
+fi
+
+if [ $usage_request -eq 1 ]; then
+  usage $0
 fi
 
 # Variables set by general setup.
