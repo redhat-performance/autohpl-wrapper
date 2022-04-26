@@ -108,6 +108,20 @@ fi
 # wrapper specific code.
 #
 
+expand_cpu_range() {
+  local IFS=,
+  set -- $1
+  for range; do
+    case $range in
+      *-*)
+         for (( i=${range%-*}; i<=${range#*-}; i++ )); do
+           echo $i
+         done ;;
+      *)   echo $range ;;
+    esac
+  done
+}
+
 size_platform()
 {
   LSCPU="$(mktemp /tmp/lscpu.XXXXXX)"
@@ -180,18 +194,24 @@ size_platform()
   echo numl3s $numl3s
 
   # Just assume all CPUs are the same because if not, shoot me
+  # In more detail, we're assuming all CPUs share caches in the same way
+  # (i.e. if the L3 cache of CPU 0 is shared by 8 CPUs, *all* L3 caches
+  # are shared by 8 CPUs).  It might be possible to parse all the L3 cache
+  # entries and figure out the mapping, but: 1) I haven't figured out how to
+  # make any good use of that mapping with OpenMPI+OpenMP, and 2) I haven't
+  # yet run into any systems that have mismatched L3:CPU mapping.
+  # All that said, this code will handle CPU lists that are any of three
+  # formats: comma-separated (1,2,3), hyphen-delimited range (1-3), or a comma-
+  # separated list of hyphen-delimited ranges (1-3,7-9).  If there are more
+  # types of list we'll have to revisit expand_cpu_range() above to add support.
   if [ -d /sys/devices/system/cpu/cpu0/cache/index3 ]; then
-    grep "," /sys/devices/system/cpu/cpu0/cache/index3/shared_cpu_list > /dev/null
-    if [[ $? -eq 0 ]]; then
-      # Comma-separated list
-      threadspl3=$(cat /sys/devices/system/cpu/cpu0/cache/index3/shared_cpu_list |sed s/,/\ /g|wc -w)
-      corespl3=$((threadspl3 / thpcore))
-    else
-      # Range
-      end=$(cut -d- -f 2 /sys/devices/system/cpu/cpu0/cache/index3/shared_cpu_list)
-      threadspl3=$((end + 1))
-      corespl3=$((threadspl3 / thpcore))
-    fi
+    cpulist=$(cat /sys/devices/system/cpu/cpu0/cache/index3/shared_cpu_list)
+    echo cpulist ${cpulist}
+    threadspl3=$(expand_cpu_range ${cpulist})
+    threadspl3=$(echo $threadspl3 | wc -w)
+    echo threadspl3 ${threadspl3}
+    corespl3=$((threadspl3 / thpcore))
+    echo corespl3 ${corespl3}
   else
     # Ampere's eMag & Altra *have* an L3 cache but doesn't present it via ACPI
     # so there's no entry in sysfs. :sadface: Fortunately they don't have SMT
@@ -205,7 +225,11 @@ size_platform()
     NUM_MPI_PROCESS_MT=$numl3s
   fi
   NUM_MPI_PROCESS_ST=$((corespnode * nodes)) #Default MPI rank for ST BLAS run
-  NOMP=$corespnode # Default OMP_NUM_THREADS
+  if [ -d /sys/devices/system/cpu/cpu0/cache/index3 ]; then
+    NOMP=$corespl3
+  else
+    NOMP=$corespnode # Default OMP_NUM_THREADS
+  fi
   # Another special case: Ampere eMag performs significantly better as
   # MPI only without OMP - like over 3x better.
   if [[ "$vendor" == "APM" && $model -eq 2 ]]; then
@@ -232,6 +256,9 @@ size_platform()
       NBS=224
     elif [[ $family -eq 25 && $model -eq 1 ]]; then
       # AMD Milan
+      NBS=224
+    elif [[ $family -eq 25 && $model -eq 16 ]]; then
+      # AMD Genoa
       NBS=224
     elif [[ $family -eq 6 ]]; then
       # Intel
