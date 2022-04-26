@@ -107,7 +107,10 @@ expand_cpu_range() {
   set -- $1
   for range; do
     case $range in
-      *-*) for (( i=${range%-*}; i<=${range#*-}; i++ )); do echo $i; done ;;
+      *-*)
+         for (( i=${range%-*}; i<=${range#*-}; i++ )); do
+           echo $i
+         done ;;
       *)   echo $range ;;
     esac
   done
@@ -185,6 +188,16 @@ size_platform()
   echo numl3s $numl3s
 
   # Just assume all CPUs are the same because if not, shoot me
+  # In more detail, we're assuming all CPUs share caches in the same way
+  # (i.e. if the L3 cache of CPU 0 is shared by 8 CPUs, *all* L3 caches
+  # are shared by 8 CPUs).  It might be possible to parse all the L3 cache
+  # entries and figure out the mapping, but: 1) I haven't figured out how to
+  # make any good use of that mapping with OpenMPI+OpenMP, and 2) I haven't
+  # yet run into any systems that have mismatched L3:CPU mapping.
+  # All that said, this code will handle CPU lists that are any of three
+  # formats: comma-separated (1,2,3), hyphen-delimited range (1-3), or a comma-
+  # separated list of hyphen-delimited ranges (1-3,7-9).  If there are more
+  # types of list we'll have to revisit expand_cpu_range() above to add support.
   if [ -d /sys/devices/system/cpu/cpu0/cache/index3 ]; then
     cpulist=$(cat /sys/devices/system/cpu/cpu0/cache/index3/shared_cpu_list)
     echo cpulist ${cpulist}
