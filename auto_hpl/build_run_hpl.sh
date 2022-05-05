@@ -41,7 +41,7 @@ fi
 AMD_BLIS_DIR=$run_dir/amd/blis
 HPL_PATH=$run_dir/hpl
 SCRIPT_DIR=$run_dir
-tools_git=https://github.com/redhat-performance/test_tools
+tools_git=https://github.com/redhat-performance/test_tools-wrappers
 sleep_for=0
 
 usage()
