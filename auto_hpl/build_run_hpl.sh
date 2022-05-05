@@ -41,7 +41,7 @@ fi
 AMD_BLIS_DIR=$run_dir/amd/blis
 HPL_PATH=$run_dir/hpl
 SCRIPT_DIR=$run_dir
-tools_git=https://github.com/redhat-performance/test_tools-wrappers
+tools_git=https://github.com/redhat-performance/test_tools
 sleep_for=0
 
 usage()
@@ -52,7 +52,7 @@ usage()
 	echo "  --use_mkl: use the mkl lib"
 	echo "  --use_blis: use the blis lib"
 	echo "  --regression: limit the amount of memory for regression"
-	source test_tools-wrappers/general_setup --usage
+	source test_tools/general_setup --usage
 	exit
 }
 
@@ -82,8 +82,8 @@ done
 # Check to see if the test tools directory exists.  If it does, we do not need to
 # clone the repo.
 #
-if [ ! -d "test_tools-wrappers" ]; then
-  git clone $tools_git
+if [ ! -d "test_tools" ]; then
+  git clone $tools_git tools_git
   if [ $? -ne 0 ]; then
     echo pulling git $tools_git failed.
     exit
@@ -552,7 +552,7 @@ use_mkl=0
 use_blis=0
 regression=0
 
-source test_tools-wrappers/general_setup "$@"
+source test_tools/general_setup "$@"
 
 ARGUMENT_LIST=(
 	"mem_size"
