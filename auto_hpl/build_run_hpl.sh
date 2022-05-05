@@ -31,12 +31,17 @@ HPL_VER=2.3
 NUM_ITER=1
 typeset mem_size=0
 
-chars=`echo $0 | awk -v RS='/' 'END{print NR-1}'`
-run_dir=`echo $0 | cut -d'/' -f 1-${chars}`
+if [[ $0 == "./"* ]]; then
+	run_dir=`pwd`
+else
+	chars=`echo $0 | awk -v RS='/' 'END{print NR-1}'`
+	run_dir=`echo $0 | cut -d'/' -f 1-${chars}`
+fi
+
 AMD_BLIS_DIR=$run_dir/amd/blis
 HPL_PATH=$run_dir/hpl
 SCRIPT_DIR=$run_dir
-tools_git=https://github.com/dvalinrh/test_tools
+tools_git=https://github.com/redhat-performance/test_tools-wrappers
 sleep_for=0
 
 usage()
