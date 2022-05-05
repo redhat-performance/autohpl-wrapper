@@ -83,7 +83,7 @@ done
 # clone the repo.
 #
 if [ ! -d "test_tools" ]; then
-  git clone $tools_git tools_git
+  git clone $tools_git test_tools
   if [ $? -ne 0 ]; then
     echo pulling git $tools_git failed.
     exit
