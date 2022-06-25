@@ -31,13 +31,13 @@ HPL_VER=2.3
 NUM_ITER=1
 typeset mem_size=0
 
+curdir=`pwd`
 if [[ $0 == "./"* ]]; then
 	chars=`echo $0 | awk -v RS='/' 'END{print NR-1}'`
 	if [[ $chars == 1 ]]; then
 		run_dir=`pwd`
 	else
 		run_dir=`echo $0 | cut -d'/' -f 1-${chars} | cut -d'.' -f2-`
-		curdir=`pwd`
 		run_dir="${curdir}${run_dir}"
 	fi
 else
@@ -681,6 +681,7 @@ else
 			fi
 		fi
 	done
+	cp ${curdir}/meta_data.yml results_auto_hpl_${to_tuned_setting}
 	cd /tmp
 	tar hcf results_auto_hpl_${to_tuned_setting}.tar results_auto_hpl_${to_tuned_setting}
 fi
