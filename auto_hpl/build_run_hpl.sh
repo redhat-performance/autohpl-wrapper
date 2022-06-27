@@ -660,7 +660,7 @@ run_times=0
 if [ $to_pbench -eq 1 ];then
 	source ~/.bashrc
 
-  	$TOOLS_BIN/execute_pbench --cmd_executing "$0" $arguments --test auto_hpl --spacing 11
+  	$TOOLS_BIN/execute_via_pbench --cmd_executing "$0" $arguments --test auto_hpl --spacing 11
   	cd /tmp
   	cp results_auto_hpl_${to_tuned_setting}.tar results_pbench_auto_hpl_${to_tuned_setting}.tar
 else
