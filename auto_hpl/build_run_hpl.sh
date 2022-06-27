@@ -671,6 +671,7 @@ else
 		mkdir $rdir
 		mv hpl* $rdir
 		cd $rdir
+		cp ${curdir}/meta_data.yml .
   		for results in `ls -d *log`; do
 	  		out_file=`echo $results | sed "s/\.log/\.csv/g"`
 	  		cat $results | tr -s ' ' | sed "s/^ //g" | sed "s/ /:/g" > $out_file
@@ -681,7 +682,6 @@ else
 			fi
 		fi
 	done
-	cp ${curdir}/meta_data.yml results_auto_hpl_${to_tuned_setting}
 	cd /tmp
 	tar hcf results_auto_hpl_${to_tuned_setting}.tar results_auto_hpl_${to_tuned_setting}
 fi
