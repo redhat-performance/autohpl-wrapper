@@ -26,6 +26,13 @@
 export LANG=C
 arguments="$@"
 
+if [ ! -f "auto_hpl.out" ]; then
+	command="${0} $@}"
+	echo $command
+	script -c "$command}" auto_hpl.out
+	exit $?
+fi
+
 HPL_LINK=http://www.netlib.org/benchmark/hpl/hpl-2.3.tar.gz
 HPL_VER=2.3
 NUM_ITER=1
@@ -672,9 +679,16 @@ else
 		mv hpl* $rdir
 		cd $rdir
 		cp ${curdir}/meta_data.yml .
+		pwd > /tmp/debugging
   		for results in `ls -d *log`; do
+			lines=`wc -l ${results} | cut -d' ' -f1`
+			if [ $lines -eq 1 ]; then
+				echo Failed >> test_status
+			else
+				echo Ran >> test_status
+			fi
 	  		out_file=`echo $results | sed "s/\.log/\.csv/g"`
-	  		cat $results | tr -s ' ' | sed "s/^ //g" | sed "s/ /:/g" > $out_file
+	  		cat $results | tr -s ' ' | sed "s/^ //g" | sed "s/ /:/g" >> $out_file
   		done
 		if [ $sleep_for -ne 0 ];then
 			if [ $iteration -ne $to_times_to_run ]; then
@@ -683,6 +697,7 @@ else
 		fi
 	done
 	cd /tmp
+	mv ${curdir}/auto_hpl.out results_auto_hpl_${to_tuned_setting}
 	tar hcf results_auto_hpl_${to_tuned_setting}.tar results_auto_hpl_${to_tuned_setting}
 fi
 exit 0
