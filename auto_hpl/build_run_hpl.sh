@@ -683,9 +683,9 @@ else
   		for results in `ls -d *log`; do
 			lines=`wc -l ${results} | cut -d' ' -f1`
 			if [ $lines -eq 1 ]; then
-				echo Failed >> test_status
+				echo Failed >> test_results_report
 			else
-				echo Ran >> test_status
+				echo Ran >> test_results_report
 			fi
 	  		out_file=`echo $results | sed "s/\.log/\.csv/g"`
 	  		cat $results | tr -s ' ' | sed "s/^ //g" | sed "s/ /:/g" >> $out_file
