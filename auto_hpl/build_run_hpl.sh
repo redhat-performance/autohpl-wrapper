@@ -26,11 +26,14 @@
 export LANG=C
 arguments="$@"
 
-if [ ! -f "auto_hpl.out" ]; then
-	command="${0} $@}"
-	echo $command
-	script -c "$command}" auto_hpl.out
-	exit $?
+test_name=auto_hpl
+if [ ! -f "/tmp/${test_name}.out" ]; then
+	command="${0} $@"
+	touch /tmp/${test_name}.out
+	$command &> /tmp/${test_name}.out
+	cat /tmp/${test_name}.out
+	rm /tmp/${test_name}.out
+	exit
 fi
 
 HPL_LINK=http://www.netlib.org/benchmark/hpl/hpl-2.3.tar.gz
@@ -671,7 +674,8 @@ if [ $to_pbench -eq 1 ];then
   	cd /tmp
   	cp results_auto_hpl_${to_tuned_setting}.tar results_pbench_auto_hpl_${to_tuned_setting}.tar
 else
-	for iteration in 1 `seq 1 1 ${to_times_to_run}`; do
+	range=`seq 1 1 $to_times_to_run`
+	for iteration in $range; do
   		install_run_hpl
   		pushd /tmp/results_auto_hpl_${to_tuned_setting} > /dev/null
 		rdir=results_${iteration}
