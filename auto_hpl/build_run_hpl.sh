@@ -279,7 +279,7 @@ size_platform()
     elif [[ $family -eq 25 && $model -eq 1 ]]; then
       # AMD Milan
       NBS=224
-    elif [[ $family -eq 25 && $model -eq 16 ]]; then
+    elif [[ $family -eq 25 && $model -eq 17 ]]; then
       # AMD Genoa
       NBS=224
     elif [[ $family -eq 6 ]]; then
