@@ -703,7 +703,8 @@ else
 	cd /tmp
 	mv ${curdir}/auto_hpl.out results_auto_hpl_${to_tuned_setting}
 	rm -f results_pbench.tar
-	find ${RESULTDIR} -type f | tar --transform 's/.*\///g' -cf results_pbench.tar --files-from=/dev/stdin
+	working_dir=`ls -rtd /tmp/results*${test_name}* | grep -v tar | tail -1`
+	find ${working_dir} -type f | tar --transform 's/.*\///g' -cf results_pbench.tar --files-from=/dev/stdin
 	tar hcf results_auto_hpl_${to_tuned_setting}.tar ${RESULTSDIR}
 fi
 exit 0
