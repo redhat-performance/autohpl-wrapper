@@ -26,14 +26,21 @@
 export LANG=C
 arguments="$@"
 
+exit_out()
+{
+	echo $1
+	exit $2
+}
+
 test_name=auto_hpl
 if [ ! -f "/tmp/${test_name}.out" ]; then
 	command="${0} $@"
 	touch /tmp/${test_name}.out
 	$command &> /tmp/${test_name}.out
+	rtval=$?
 	cat /tmp/${test_name}.out
 	rm /tmp/${test_name}.out
-	exit
+	exit $rtval
 fi
 
 HPL_LINK=http://www.netlib.org/benchmark/hpl/hpl-2.3.tar.gz
@@ -70,11 +77,10 @@ usage()
 	echo "  --use_blis: use the blis lib"
 	echo "  --regression: limit the amount of memory for regression"
 	source test_tools/general_setup --usage
-	exit
+	exit 0
 }
 
 found=0
-usage_request=0
 for arg in "$@"; do
   if [ $found -eq 1 ]; then
     tools_git=$arg
@@ -91,7 +97,7 @@ for arg in "$@"; do
   #
 
   if [[ $arg == "--usage" ]]; then
-    usage_request=1
+    usage $0
   fi
 done
 
@@ -102,13 +108,8 @@ done
 if [ ! -d "test_tools" ]; then
   git clone $tools_git test_tools
   if [ $? -ne 0 ]; then
-    echo pulling git $tools_git failed.
-    exit
+	  exit_out "pulling git $tools_git failed." 1
   fi
-fi
-
-if [ $usage_request -eq 1 ]; then
-  usage $0
 fi
 
 # Variables set by general setup.
@@ -171,15 +172,13 @@ size_platform()
     elif [[ "$vendor" == *"GenuineIntel"* ]]; then
       vendor="Intel"
     else
-      echo "Unrecognized CPU vendor ${vendor}, exiting"
-      exit 1
+      exit_out "Unrecognized CPU vendor ${vendor}, exiting" 1
     fi
     if [[ "$vendor" -ne "AMD" && "$use_blis" == 1 ]]; then
-      echo "BLIS library support is only for AMD CPUs"
-      exit 1
+      exit_out "BLIS library support is only for AMD CPUs" 1
     fi
     if [[ "$vendor" -ne "Intel" && "use_mkl" == 1 ]]; then
-      exit 1
+	exit_out "Error: mkl is only for INTEL" 1
     fi
   elif [[ "$arch" == "aarch64" ]]; then
     BLAS_MT=1
@@ -191,8 +190,7 @@ size_platform()
       MPI_PATH=/usr/
     fi
   else
-    echo "Architecture $arch is unsupported"
-    exit 1
+    exit_out "Error: Architecture $arch is unsupported" 1
   fi
   model=$(grep "Model:" $LSCPU | cut -d: -f 2|sed -e s/^[[:space:]]*//g -e s/[[:space:]]*$//g)
   stepping=$(grep "Stepping:" $LSCPU | cut -d: -f 2)
@@ -290,8 +288,7 @@ size_platform()
     # Honestly this is just a guess, sadly
     NBS=256
   else
-    echo "Unsupported arch ${arch}, exiting"
-    exit 1
+    exit_out "Error: Unsupported arch ${arch}, exiting" 1
   fi
   # Now we have to round N to a multiple of NBS to prevent a fragment at the end
   NS=$((NS / NBS))
@@ -377,6 +374,9 @@ repo_gpgcheck=0
 EOF
     fi
     yum -y install intel-mkl
+    if [ $? -ne 0 ]; then
+	    exit_out "echo Error: install of mkl failed" 1
+    fi
   fi
   if [ $ubuntu -eq 1 ]; then
     apt list installed intel-mkl 2>&1 > /dev/null
@@ -388,11 +388,23 @@ EOF
 
     # keys taken from https://software.intel.com/en-us/articles/installing-intel-free-libs-and-python-apt-repo
     wget https://apt.repos.intel.com/intel-gpg-keys/GPG-PUB-KEY-INTEL-SW-PRODUCTS-2019.PUB
+    if [ $? -ne 0 ]; then
+	    exit_out "Error: wget failed on https://apt.repos.intel.com/intel-gpg-keys/GPG-PUB-KEY-INTEL-SW-PRODUCTS-2019.PUB" 1
+    fi
     apt-key add GPG-PUB-KEY-INTEL-SW-PRODUCTS-2019.PUB
+    if [ $? -ne 0 ]; then
+	    exit_out "Error: apt key add failed on GPG-PUB-KEY-INTEL-SW-PRODUCTS-2019.PUB" 1
+    fi
 
     sh -c 'echo deb https://apt.repos.intel.com/mkl all main > /etc/apt/sources.list.d/intel-mkl.list'
     apt-get update
+    if [ $? -ne 0 ]; then
+	    exit_out "Error: apt key get update failed" 1
+    fi
     apt-get --yes install  intel-mkl
+    if [ $? -ne 0 ]; then
+	    exit_out "Error: apt key get install failed" 1
+    fi
     popd
   fi
 }
@@ -403,6 +415,9 @@ check_mpi()
     yum list installed openmpi 2>&1 > /dev/null
     if [[ "$?" != "0" ]]; then
       yum -y install openmpi openmpi-devel
+      if [ $? -ne 0 ]; then
+	    exit_out "Error: yum install openmpi openmpi-devel" 1
+      fi
     fi
     which mpirun 2>&1 > /dev/null
     # MPI module isn't loaded, go ahead and load it
@@ -410,20 +425,24 @@ check_mpi()
       source /etc/profile.d/modules.sh
       module load mpi/openmpi-${arch}
       if [ $? != 0 ]; then
-        echo "module load mpi/openmpi-${arch} failed, exiting"
-        exit 1
+        exit_out "module load mpi/openmpi-${arch} failed, exiting" 1
       fi
       which mpirun 2>&1 > /dev/null
+      if [ $? ! = 0 ]; then
+	exit_out "Error: mpirun not in path. exiting" 1
+      fi
     fi
   fi
   if [ $ubuntu -eq 1 ]; then
     apt-get --yes install openmpi-bin openmpi-common
+    if [ $? -ne 0 ]; then
+	    exit_out "apt-get openmpi-bin openmpi-common failed." 1
+    fi
     #
     # Above loaded openmpi*
     which mpirun 2>&1 > /dev/null
     if [[ $? != 0 ]]; then
-      echo could not find mpirun
-      exit
+      exit_out "could not find mpirun" 1
     fi
   fi
 }
@@ -435,8 +454,7 @@ build_blis()
 
   eval "mkdir -p blis"
   if [[ $? -ne 0 ]]; then
-   log "\nUnable to create Directory blis. Try with sudo \n"
-   exit
+   exit_out  "\nUnable to create Directory blis. Try with sudo \n" 1
   fi
   cd blis
 
@@ -444,12 +462,15 @@ build_blis()
   # create directories
   eval "mkdir -p $blisdir"
   if [[ $? -ne 0 ]]; then
-   log "\nUnable to create Directory $blisdir. Try with sudo \n"
-   exit
+   exit_out "\nUnable to create Directory $blisdir. Try with sudo \n" 1
   fi
 
   echo "Cloning AMD BLIS from https://github.com/amd/blis.git"
   git clone https://github.com/amd/blis.git
+  if [ $? -ne 0 ]; then
+	  exit_out "Error: git clone https://github.com/amd/blis.git failed" 1
+	  exit 1
+  fi
 
   cd blis
   enableblismt=
@@ -461,8 +482,17 @@ build_blis()
   fi
   echo ./configure --enable-shared --enable-cblas $enableblismt --prefix=$blisdir zen
   ./configure --enable-shared --enable-cblas $enableblismt --prefix=$blisdir zen 2>&1 > ${RESULTSDIR}/blis_config.out
+  if [ $? -ne 0 ]; then
+	  exit_out "Error: ./configure --enable-shared --enable-cblas $enableblismt --prefix=$blisdir zen failed" 1
+  fi
   make -j 50 2>&1 > ${RESULTSDIR}/blis_make.out
+  if [ $? -ne 0 ]; then
+	  exit_out "Error: make -j 50 2>&1 > ${RESULTSDIR}/blis_make.out failed" 1
+  fi
   make install 2>&1 > ${RESULTSDIR}/blis_make_install.out
+  if [ $? -ne 0 ]; then
+	  exit_out "Error: make install failed" 1
+  fi
 }
 
 build_hpl()
@@ -473,12 +503,17 @@ build_hpl()
   # create directories
   eval "mkdir -p $HPL_PATH"
   if [[ $? -ne 0 ]]; then
-   log "\nUnable to create Directory $HPL_PATH. Try with sudo \n"
-   exit
+   exit_out "\nUnable to create Directory $HPL_PATH. Try with sudo \n" 1
   fi
   cd $HPL_PATH
   wget $HPL_LINK
+  if [ $? -ne 0 ]; then
+	  exit_out "Error: wget $HPL_LINK failed." 1
+  fi
   tar -xf hpl-$HPL_VER.tar.gz
+  if [ $? -ne 0 ]; then
+	  exit_out "Error: tar -xf hpl-$HPL_VER.tar.gz failed" 1
+  fi
   cd hpl-$HPL_VER
 
   makefile=Make.Linux_${blaslib}
@@ -492,6 +527,9 @@ build_hpl()
   sed s,TOPDIR,$run_dir, ${run_dir}/${makefile} > Make.Linux_${blaslib}
   bindir=Linux_${blaslib}
   make arch=Linux_${blaslib} 2>&1 > ${RESULTSDIR}/hpl_make.out
+  if [ $? -ne 0 ]; then
+  	exit_out "Error: make arch=Linux_${blaslib} 2>&1 > ${RESULTSDIR}/hpl_make.out" 1
+  fi
 }
 
 clean_env()
@@ -593,8 +631,7 @@ opts=$(getopt \
 )
 
 if [ $? -ne 0 ]; then
-	echo need to provide arguments.
-	exit
+	exit_out "need to provide arguments." 1
 fi
 
 eval set --$opts
@@ -629,8 +666,7 @@ while [[ $# -gt 0 ]]; do
       break
     ;;
     *)
-      echo "option $1 not found"
-      exit
+      exit_out "option $1 not found" 1
     ;;
   esac
 done
@@ -642,6 +678,9 @@ if [ ${info} == "amzn2" ]; then
   mkdir src
   pushd src
   git clone https://github.com/xianyi/OpenBLAS
+  if [ $? -ne 0 ]; then
+	  exit_out "git clone https://github.com/xianyi/OpenBLAS failed" 1
+  fi
   cd OpenBLAS
   make FC=gfortran
   make PREFIX=/usr/lib64 install
@@ -656,8 +695,7 @@ fi
 
 # --regression and --mem_size are mutually exclusive, bail if both are set
 if [ ${mem_size} -ne 0 ] && [ ${regression} -ne 0 ]; then
-  echo "You can't use both --regression and --mem_size, exiting."
-  exit 1
+  exit_out "You can't use both --regression and --mem_size, exiting." 1
 fi
 
 RESULTSDIR=/tmp/results_auto_hpl_${to_tuned_setting}_$(date "+%Y.%m.%d-%H.%M.%S")
