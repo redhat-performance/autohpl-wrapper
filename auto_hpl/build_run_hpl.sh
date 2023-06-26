@@ -60,8 +60,13 @@ if [[ $0 == "./"* ]]; then
 else
 	chars=`echo $0 | awk -v RS='/' 'END{print NR-1}'`
 	run_dir=`echo $0 | cut -d'/' -f 1-${chars}`
+	if [[ $run_dir != "/"* ]]; then
+		run_dir=${curdir}/${run_dir}
+	fi
 fi
 
+echo ------
+echo run_dir $run_dir
 AMD_BLIS_DIR=$run_dir/amd/blis
 HPL_PATH=$run_dir/hpl
 SCRIPT_DIR=$run_dir
@@ -71,11 +76,11 @@ sleep_for=0
 usage()
 {
 	echo Usage $1:
-	echo "  --mem_size <value>: desginate the size of memory to work with"
+	echo "  --mem_size <value>: desginate the size of memory to work with (in gig)."
 	echo "  --sleep_between_runs <value>: sleep this number of seconds before stating to the next run."
-	echo "  --use_mkl: use the mkl lib"
-	echo "  --use_blis: use the blis lib"
-	echo "  --regression: limit the amount of memory for regression"
+	echo "  --use_mkl: use the mkl lib."
+	echo "  --use_blis: use the blis lib."
+	echo "  --regression: limit the amount of memory for regression."
 	source test_tools/general_setup --usage
 	exit 0
 }
@@ -257,13 +262,12 @@ size_platform()
     NUM_MPI_PROCESS_ST=$corespskt
     NOMP=1
   fi
-  totmem=$(free -g|grep Mem|awk '{print $2}')
-  echo $totmem
-  if [[ $mem_size != 0 ]]; then
-    NS=$mem_size
+  if [ $mem_size -eq 0 ]; then
+  	totmem=$(free -g|grep Mem|awk '{print $2}')
   else
-    NS=$(echo "sqrt(($totmem * 1024 * 1024 * 1024) / 8) * 0.86 / 1" | bc)
+    totmem=$mem_size
   fi
+  NS=$(echo "sqrt(($totmem * 1024 * 1024 * 1024) / 8) * 0.86 / 1" | bc)
   if [[ "$regression" == "1" ]]; then
     NS=$((NS / 4))
   fi
@@ -421,14 +425,14 @@ check_mpi()
     fi
     which mpirun 2>&1 > /dev/null
     # MPI module isn't loaded, go ahead and load it
-    if [[ $? != 0 ]]; then
+    if [ $? -ne 0 ]; then
       source /etc/profile.d/modules.sh
       module load mpi/openmpi-${arch}
-      if [ $? != 0 ]; then
+      if [ $? -ne 0 ]; then
         exit_out "module load mpi/openmpi-${arch} failed, exiting" 1
       fi
       which mpirun 2>&1 > /dev/null
-      if [ $? ! = 0 ]; then
+      if [ $? -ne 0 ]; then
 	exit_out "Error: mpirun not in path. exiting" 1
       fi
     fi
@@ -743,6 +747,7 @@ else
 	rm -f results_pbench.tar
 	working_dir=`ls -rtd /tmp/results*${test_name}* | grep -v tar | tail -1`
 	find ${working_dir} -type f | tar --transform 's/.*\///g' -cf results_pbench.tar --files-from=/dev/stdin
+	cp /tmp/${test_name}.out ${RESULTSDIR}
 	tar hcf results_auto_hpl_${to_tuned_setting}.tar ${RESULTSDIR}
 fi
 exit 0
