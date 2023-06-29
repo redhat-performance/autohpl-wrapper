@@ -76,7 +76,7 @@ sleep_for=0
 usage()
 {
 	echo Usage $1:
-	echo "  --mem_size <value>: desiginate the size of memory to work with (in gig)."
+	echo "  --mem_size <value>: desiginate the size of memory to work with (in GiB")."
 	echo "  --sleep_between_runs <value>: sleep this number of seconds before stating to the next run."
 	echo "  --use_mkl: use the mkl lib."
 	echo "  --use_blis: use the blis lib."
