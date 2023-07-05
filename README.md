@@ -16,6 +16,7 @@ To run:
 
 The script will set the sizings based on the hardware it is being run.
 
+```
 Options
   --mem_size <value>: desiginate the size of memory to work with (in gig).
   --sleep_between_runs <value>: sleep this number of seconds before stating to the next run.
@@ -37,5 +38,6 @@ General options
   --tuned_setting: used in naming the tar file, default for RHEL is the current active tuned.  For non
     RHEL systems, default is none.
   --usage: this usage message.
+```
 
 Note: The script does not install pbench for you.  You need to do that manually.
