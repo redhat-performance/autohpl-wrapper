@@ -567,8 +567,9 @@ run_hpl()
 	echo "bind_settings=$bind_settings"
 
 	echo  "$MPI_PATH/bin/mpirun --allow-run-as-root -np $num_mpi --mca btl self,vader --report-bindings $bind_settings ./xhpl"
+	echo  "$MPI_PATH/bin/mpirun --allow-run-as-root -np $num_mpi --mca btl self,vader --report-bindings $bind_settings ./xhpl" > $outfile
 
-	echo "     T/V           N    NB     P     Q               Time                 Gflops"  > $outfile
+	echo "     T/V           N    NB     P     Q               Time                 Gflops"  >> $outfile
 	for i in $(seq "$NUM_ITER")
 	do
 		$MPI_PATH/bin/mpirun --allow-run-as-root -np $num_mpi --mca btl self,vader --report-bindings $bind_settings ./xhpl 2>&1 > hpl.out
