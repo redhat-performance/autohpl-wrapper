@@ -26,6 +26,15 @@
 export LANG=C
 arguments="$@"
 
+aws=0
+ubuntu=0
+info=`test_tools/detect_os`
+if [[ ${info} == "ubuntu" ]]; then
+	ubuntu=1
+elif [[ ${info} == "amzn" ]]; then
+	aws=1
+fi
+
 exit_out()
 {
 	echo $1
@@ -156,16 +165,15 @@ size_platform()
 	/usr/bin/lscpu > $LSCPU
 	arch=$(grep "Architecture:" $LSCPU | cut -d: -f 2|sed s/\ //g)
 	vendor=$(grep "Vendor ID:" $LSCPU | cut -d: -f 2|tr -cd '[:alnum:]' | sed -e s/^[[:space:]]*//g -e s/[[:space:]]*$//g)
+	MPI_PATH=/usr/
+	if [ $ubuntu -eq 0 ]; then
+		MPI_PATH=${MPI_PATH}/lib64/openmpi
+	elif [ $aws -eq 1 ]; then
+		MPI_PATH=${MPI_PATH}/lib64/openmpi/bin/
+	fi
+	BLAS_MT=1 #Set 1 to use Multi-thread BLAS, 0 for single thread
 	if [[ "$arch" == "x86_64" ]]; then
-		BLAS_MT=1 #Set 1 to use Multi-thread BLAS, 0 for single thread
 
-		if [ $ubuntu -eq 0 ]; then
-			MPI_PATH=/usr/lib64/openmpi
-		elif [ $aws -eq 1 ]; then
-			MPI_PATH=/usr/lib64/openmpi/bin/
-		else
-			MPI_PATH=/usr/
-		fi
 		family=$(grep "CPU family" $LSCPU | cut -d: -f 2)
 		#
 		# Strip off the weird marketing names
@@ -185,16 +193,7 @@ size_platform()
 		if [[ "$vendor" -ne "Intel" && "use_mkl" == 1 ]]; then
 			exit_out "Error: mkl is only for INTEL" 1
 		fi
-	elif [[ "$arch" == "aarch64" ]]; then
-		BLAS_MT=1
-		if [ $ubuntu -eq 0 ]; then
-			MPI_PATH=/usr/lib64/openmpi
-		elif [ $aws -eq 1 ]; then
-			MPI_PATH=/usr/lib64/openmpi/bin/
-		else
-			MPI_PATH=/usr/
-    		fi
-	else
+	elif [[ "$arch" != "aarch64" ]]; then
 		exit_out "Error: Architecture $arch is unsupported" 1
 	fi
 	model=$(grep "Model:" $LSCPU | cut -d: -f 2|sed -e s/^[[:space:]]*//g -e s/[[:space:]]*$//g)
@@ -500,6 +499,7 @@ build_blis()
 
 build_hpl()
 {
+	blaslib=$1
 	echo "Get xHPL code. Change the HPL_LINK and HPL_VER variables suitably for required version"
 	cd $SCRIPT_DIR
   
@@ -544,6 +544,7 @@ clean_env()
 
 run_hpl()
 {
+	blaslib=$1
 	cd $HPL_PATH/hpl-$HPL_VER/bin/${bindir}
 
 	# ckup the existing HPL.dat file
@@ -584,6 +585,7 @@ install_run_hpl()
 	size_platform
 	check_mpi
 	clean_env
+	blaslib=""
 	if [[ "$arch" == "x86_64" ]]; then
 		# Build AMD's special BLIS package
 		if [[ "$use_blis" == "1" ]]; then
@@ -603,8 +605,8 @@ install_run_hpl()
 		echo "Using system OpenBLAS-OpenMP"
 		blaslib="aarch64_openblas"
 	fi
-	build_hpl 
-	run_hpl
+	build_hpl $blaslib
+	run_hpl $blaslib
 }
 
 use_mkl=0
@@ -675,26 +677,20 @@ while [[ $# -gt 0 ]]; do
 	esac
 done
 
-info=`uname -a | cut -d' ' -f3 | cut -d'.' -f5`
-aws=0
-if [ ${info} == "amzn2" ]; then
-	aws=1
+if [ $aws -eq 1 ]; then
 	mkdir src
 	pushd src
-	git clone https://github.com/xianyi/OpenBLAS
-	if [ $? -ne 0 ]; then
-		exit_out "git clone https://github.com/xianyi/OpenBLAS failed" 1
+	if [[ ! -d "OpenBLAS" ]]; then
+		git clone https://github.com/xianyi/OpenBLAS
+		if [ $? -ne 0 ]; then
+			exit_out "git clone https://github.com/xianyi/OpenBLAS failed" 1
+		fi
 	fi
 	cd OpenBLAS
 	make FC=gfortran
 	make PREFIX=/usr/lib64 install
 	cp /usr/lib64/lib/libopenblas.so /usr/lib64/libopenblas.so
 	cp /usr/lib64/lib/libopenblas.so /usr/lib64/libopenblas.so.0
-fi
-info=`uname -a | cut -d' ' -f 4 | cut -d'-' -f2`
-ubuntu=0
-if [ ${info} == "Ubuntu" ]; then
-	ubuntu=1
 fi
 
 # --regression and --mem_size are mutually exclusive, bail if both are set
