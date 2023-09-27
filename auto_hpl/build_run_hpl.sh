@@ -25,6 +25,7 @@
 # Uses OpenBLAS for ARM
 export LANG=C
 arguments="$@"
+aws=0
 
 exit_out()
 {
@@ -354,6 +355,25 @@ size_platform()
 	echo NQ $NQ
 }
 
+install_blas()
+{
+	if [ $aws -eq 1 ]; then
+		if [[ ! -f /usr/lib64/lib/libopenblas.so ]]; then
+			mkdir src
+			pushd src
+			git clone https://github.com/xianyi/OpenBLAS
+			if [ $? -ne 0 ]; then
+				exit_out "git clone https://github.com/xianyi/OpenBLAS failed" 1
+			fi
+			cd OpenBLAS
+			make FC=gfortran
+			make PREFIX=/usr/lib64 install
+			cp /usr/lib64/lib/libopenblas.so /usr/lib64/libopenblas.so
+			cp /usr/lib64/lib/libopenblas.so /usr/lib64/libopenblas.so.0
+		fi
+	fi
+}
+
 install_mkl()
 {
 	# MKL is a binary install, make sure the repo file is in place and install
@@ -597,11 +617,13 @@ install_run_hpl()
 		else
 			echo "Using system OpenBLAS"
 			blaslib="${vendor}_openblas"
+			install_blas
 		fi
 	elif [[ "$arch" == "aarch64" ]]; then
 		# Use OpenBLAS-openmp
 		echo "Using system OpenBLAS-OpenMP"
 		blaslib="aarch64_openblas"
+		install_blas
 	fi
 	build_hpl 
 	run_hpl
@@ -676,21 +698,10 @@ while [[ $# -gt 0 ]]; do
 done
 
 info=`uname -a | cut -d' ' -f3 | cut -d'.' -f5`
-aws=0
-if [ ${info} == "amzn2" ]; then
+if [[ ${info} == *"amzn"* ]]; then
 	aws=1
-	mkdir src
-	pushd src
-	git clone https://github.com/xianyi/OpenBLAS
-	if [ $? -ne 0 ]; then
-		exit_out "git clone https://github.com/xianyi/OpenBLAS failed" 1
-	fi
-	cd OpenBLAS
-	make FC=gfortran
-	make PREFIX=/usr/lib64 install
-	cp /usr/lib64/lib/libopenblas.so /usr/lib64/libopenblas.so
-	cp /usr/lib64/lib/libopenblas.so /usr/lib64/libopenblas.so.0
 fi
+
 info=`uname -a | cut -d' ' -f 4 | cut -d'-' -f2`
 ubuntu=0
 if [ ${info} == "Ubuntu" ]; then
