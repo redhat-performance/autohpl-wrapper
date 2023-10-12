@@ -604,7 +604,7 @@ install_run_hpl()
     blaslib="aarch64_openblas"
   fi
 
-  if [ $blaslib == *"openblas" ]; then
+  if [[ $blaslib == *"openblas" ]]; then
     pkgname="openblas-devel"
     if [ $ubuntu -eq 1 ]; then  
       pkgname="libopenblas-dev"
