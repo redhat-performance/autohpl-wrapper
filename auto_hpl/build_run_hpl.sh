@@ -581,30 +581,39 @@ run_hpl()
 
 install_run_hpl()
 {
-	size_platform
-	check_mpi
-	clean_env
-	if [[ "$arch" == "x86_64" ]]; then
-		# Build AMD's special BLIS package
-		if [[ "$use_blis" == "1" ]]; then
-			echo "Using AMD BLIS"
-			blaslib="AMD_BLIS"
-			build_blis
-		elif [[ "$use_mkl" == "1" ]]; then
-			echo "Using Intel MKL"
-			blaslib="Intel_MKL"
-			install_mkl
-		else
-			echo "Using system OpenBLAS"
-			blaslib="${vendor}_openblas"
-		fi
-	elif [[ "$arch" == "aarch64" ]]; then
-		# Use OpenBLAS-openmp
-		echo "Using system OpenBLAS-OpenMP"
-		blaslib="aarch64_openblas"
-	fi
-	build_hpl 
-	run_hpl
+  size_platform
+  check_mpi
+  clean_env
+  if [[ "$arch" == "x86_64" ]]; then
+    # Build AMD's special BLIS package
+    if [[ "$use_blis" == "1" ]]; then
+      echo "Using AMD BLIS"
+      blaslib="AMD_BLIS"
+      build_blis
+    elif [[ "$use_mkl" == "1" ]]; then
+      echo "Using Intel MKL"
+      blaslib="Intel_MKL"
+      install_mkl
+    else
+      echo "Using system OpenBLAS"
+      blaslib="${vendor}_openblas"
+    fi
+  elif [[ "$arch" == "aarch64" ]]; then
+    # Use OpenBLAS-openmp
+    echo "Using system OpenBLAS-OpenMP"
+    blaslib="aarch64_openblas"
+  fi
+
+  if [ $blaslib == *"openblas" ]; then
+    pkgname="openblas-devel"
+    if [ $ubuntu -eq 1 ]; then  
+      pkgname="libopenblas-dev"
+    fi
+    test_tools/package_tool --packages $pkgname --no_install $to_no_install
+  fi
+
+  build_hpl 
+  run_hpl
 }
 
 use_mkl=0
@@ -691,10 +700,10 @@ if [ ${info} == "amzn2" ]; then
 	cp /usr/lib64/lib/libopenblas.so /usr/lib64/libopenblas.so
 	cp /usr/lib64/lib/libopenblas.so /usr/lib64/libopenblas.so.0
 fi
-info=`uname -a | cut -d' ' -f 4 | cut -d'-' -f2`
+
 ubuntu=0
-if [ ${info} == "Ubuntu" ]; then
-	ubuntu=1
+if [ "`test_tools/detect_os`" == "ubuntu" ]; then
+  ubuntu=1
 fi
 
 # --regression and --mem_size are mutually exclusive, bail if both are set
