@@ -199,8 +199,7 @@ size_platform()
 	fi
 	model=$(grep "Model:" $LSCPU | cut -d: -f 2|sed -e s/^[[:space:]]*//g -e s/[[:space:]]*$//g)
 	stepping=$(grep "Stepping:" $LSCPU | cut -d: -f 2)
-	nodes=$(grep "NUMA node(s):" $LSCPU | cut -d: -f 2)
-	nodes=`echo $nodes | sed 's/^[[:space:]]*//g'`
+	nodes=`test_tools/detect_numa`
 	echo nodes $nodes
 	totcpus=$(grep "^CPU(s):" $LSCPU | cut -d: -f 2)
 	thpcore=$(grep "^Thread(s)" $LSCPU | cut -d: -f 2)
