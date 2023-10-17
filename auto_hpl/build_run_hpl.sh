@@ -702,7 +702,7 @@ fi
 
 ubuntu=0
 if [ "`test_tools/detect_os`" == "ubuntu" ]; then
-  ubuntu=1
+	ubuntu=1
 fi
 
 # --regression and --mem_size are mutually exclusive, bail if both are set
