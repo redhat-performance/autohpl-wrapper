@@ -193,14 +193,13 @@ size_platform()
 			MPI_PATH=/usr/lib64/openmpi/bin/
 		else
 			MPI_PATH=/usr/
-    		fi
+		fi
 	else
 		exit_out "Error: Architecture $arch is unsupported" 1
 	fi
 	model=$(grep "Model:" $LSCPU | cut -d: -f 2|sed -e s/^[[:space:]]*//g -e s/[[:space:]]*$//g)
 	stepping=$(grep "Stepping:" $LSCPU | cut -d: -f 2)
-	nodes=$(grep "NUMA node(s):" $LSCPU | cut -d: -f 2)
-	nodes=`echo $nodes | sed 's/^[[:space:]]*//g'`
+	nodes=`test_tools/detect_numa`
 	echo nodes $nodes
 	totcpus=$(grep "^CPU(s):" $LSCPU | cut -d: -f 2)
 	thpcore=$(grep "^Thread(s)" $LSCPU | cut -d: -f 2)
@@ -279,7 +278,7 @@ size_platform()
 			# AMD Rome
 			NBS=224
 		elif [[ $family -eq 25 && $model -eq 1 ]]; then
-      			# AMD Milan
+			# AMD Milan
 			NBS=224
 		elif [[ $family -eq 25 && $model -eq 17 ]]; then
 			# AMD Genoa
@@ -603,6 +602,15 @@ install_run_hpl()
 		echo "Using system OpenBLAS-OpenMP"
 		blaslib="aarch64_openblas"
 	fi
+
+	if [[ $blaslib == *"openblas" ]]; then
+		pkgname="openblas-devel"
+		if [ $ubuntu -eq 1 ]; then  
+			pkgname="libopenblas-dev"
+		fi
+		test_tools/package_tool --packages $pkgname --no_install $to_no_install
+	fi
+
 	build_hpl 
 	run_hpl
 }
@@ -691,9 +699,9 @@ if [ ${info} == "amzn2" ]; then
 	cp /usr/lib64/lib/libopenblas.so /usr/lib64/libopenblas.so
 	cp /usr/lib64/lib/libopenblas.so /usr/lib64/libopenblas.so.0
 fi
-info=`uname -a | cut -d' ' -f 4 | cut -d'-' -f2`
+
 ubuntu=0
-if [ ${info} == "Ubuntu" ]; then
+if [ "`test_tools/detect_os`" == "ubuntu" ]; then
 	ubuntu=1
 fi
 
