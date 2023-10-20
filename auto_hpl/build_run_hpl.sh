@@ -283,9 +283,14 @@ size_platform()
 		elif [[ $family -eq 25 && $model -eq 17 ]]; then
 			# AMD Genoa
 			NBS=224
+   		elif [[ $family -eq 25 && $model -eq 160 ]]; then
+     			# AMD Bergamo
+			NBS=384
 		elif [[ $family -eq 6 ]]; then
 			# Intel
 			NBS=256
+   		else
+     			exit_out "Error: Arch ${arch} is supported, but family $family or model $model is not, exiting" 1
 		fi
 	elif [[ "$arch" == "aarch64" ]]; then
 		# Honestly this is just a guess, sadly
