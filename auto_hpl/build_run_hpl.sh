@@ -715,7 +715,8 @@ if [ ${mem_size} -ne 0 ] && [ ${regression} -ne 0 ]; then
 	exit_out "You can't use both --regression and --mem_size, exiting." 1
 fi
 
-RESULTSDIR=/tmp/results_auto_hpl_${to_tuned_setting}_$(date "+%Y.%m.%d-%H.%M.%S")
+RESULTSDIR_OUT=results_auto_hpl_${to_tuned_setting}_$(date "+%Y.%m.%d-%H.%M.%S")
+RESULTSDIR=/tmp/${RESULTSDIR_OUT}
 rm /tmp/results_auto_hpl_${to_tuned_setting} 2> /dev/null
 mkdir ${RESULTSDIR}
 ln -s ${RESULTSDIR} /tmp/results_auto_hpl_${to_tuned_setting}
@@ -738,7 +739,6 @@ else
 		mv hpl* $rdir
 		cd $rdir
 		cp ${curdir}/meta_data*.yml .
-		pwd > /tmp/debugging
   		for results in `ls -d *log`; do
 			lines=`wc -l ${results} | cut -d' ' -f1`
 			if [ $lines -eq 1 ]; then
@@ -761,7 +761,8 @@ else
 	working_dir=`ls -rtd /tmp/results*${test_name}* | grep -v tar | tail -1`
 	find ${working_dir} -type f | tar --transform 's/.*\///g' -cf results_pbench.tar --files-from=/dev/stdin
 	cp /tmp/${test_name}.out ${RESULTSDIR}
-	tar hcf results_auto_hpl_${to_tuned_setting}.tar ${RESULTSDIR}
+	cd /tmp
+	tar hcf results_auto_hpl_${to_tuned_setting}.tar ${RESULTSDIR_OUT}
 fi
 exit 0
 
