@@ -738,7 +738,7 @@ else
 		mkdir $rdir
 		mv hpl* $rdir
 		cd $rdir
-		cp ${curdir}/meta_data.yml .
+		cp ${curdir}/meta_data*.yml .
   		for results in `ls -d *log`; do
 			lines=`wc -l ${results} | cut -d' ' -f1`
 			if [ $lines -eq 1 ]; then
