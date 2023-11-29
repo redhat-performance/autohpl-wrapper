@@ -738,7 +738,6 @@ else
 		mv hpl* $rdir
 		cd $rdir
 		cp ${curdir}/meta_data.yml .
-		pwd > /tmp/debugging
   		for results in `ls -d *log`; do
 			lines=`wc -l ${results} | cut -d' ' -f1`
 			if [ $lines -eq 1 ]; then
