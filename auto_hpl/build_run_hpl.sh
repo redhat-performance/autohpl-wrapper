@@ -723,6 +723,9 @@ ln -s ${RESULTSDIR} /tmp/results_auto_hpl_${to_tuned_setting}
 
 run_times=0
 
+# Gather hardware information
+${curdir}/test_tools/gather_data ${curdir}
+
 if [ $to_pbench -eq 1 ];then
 	source ~/.bashrc
 
@@ -739,6 +742,7 @@ else
 		mv hpl* $rdir
 		cd $rdir
 		cp ${curdir}/meta_data*.yml .
+		${curdir}/test_tools/move_data $curdir ${RESULTSDIR}
   		for results in `ls -d *log`; do
 			lines=`wc -l ${results} | cut -d' ' -f1`
 			if [ $lines -eq 1 ]; then
