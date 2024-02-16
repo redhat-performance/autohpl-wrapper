@@ -561,7 +561,7 @@ run_hpl()
 		if [[ -d /sys/devices/system/cpu/cpu0/cache/index3 ]]; then
 			bind_settings="--map-by l3cache"
 		else
-			bind_settings="--map-by socket"
+			bind_settings="--map-by numa"
 		fi
 		bind_settings="${bind_settings} -x OMP_NUM_THREADS=${NOMP}"
 		num_mpi=$NUM_MPI_PROCESS_MT
