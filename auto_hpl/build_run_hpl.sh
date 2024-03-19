@@ -755,14 +755,7 @@ else
 			fi
 		fi
 	done
-	cd /tmp
-	mv ${curdir}/auto_hpl.out results_auto_hpl_${to_tuned_setting}
-	rm -f results_pbench.tar
-	working_dir=`ls -rtd /tmp/results*${test_name}* | grep -v tar | tail -1`
-	find ${working_dir} -type f | tar --transform 's/.*\///g' -cf results_pbench.tar --files-from=/dev/stdin
-	cp /tmp/${test_name}.out ${RESULTSDIR}
-	cd /tmp
-	tar hcf results_auto_hpl_${to_tuned_setting}.tar ${RESULTSDIR_OUT}
+	${curdir}/test_tools/save_results --curdir $curdir --home_root $to_home_root --other_files "${curdir}/auto_hpl.out,*csv" --results /tmp/${test_name}.out  --test_name $test_name --tuned_setting=$to_tuned_setting --version NONE --user $to_user
 fi
 exit 0
 
