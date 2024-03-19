@@ -755,7 +755,7 @@ else
 			fi
 		fi
 	done
-	${curdir}/test_tools/save_results --curdir $curdir --home_root $to_home_root --other_files "${curdir}/auto_hpl.out,*csv" --results /tmp/${test_name}.out  --test_name $test_name --tuned_setting=$to_tuned_setting --version NONE --user $to_user
+	${curdir}/test_tools/save_results --curdir $curdir --home_root $to_home_root --other_files "${curdir}/auto_hpl.out,*csv,test_results_report" --results /tmp/${test_name}.out  --test_name $test_name --tuned_setting=$to_tuned_setting --version NONE --user $to_user
 fi
 exit 0
 
