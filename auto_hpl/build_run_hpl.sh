@@ -613,7 +613,7 @@ install_run_hpl()
 		if [ $ubuntu -eq 1 ]; then  
 			pkgname="libopenblas-dev"
 		fi
-		test_tools/package_tool --packages $pkgname --no_install $to_no_install
+		test_tools/package_tool --packages $pkgname --no_packages $to_no_pkg_install
 	fi
 
 	build_hpl 
