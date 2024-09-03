@@ -25,6 +25,7 @@
 # Uses OpenBLAS for ARM
 export LANG=C
 arguments="$@"
+results_version="1.0"
 
 exit_out()
 {
@@ -747,7 +748,10 @@ else
 				echo Ran >> test_results_report
 			fi
 	  		out_file=`echo $results | sed "s/\.log/\.csv/g"`
-	  		cat $results | tr -s ' ' | sed "s/^ //g" | sed "s/ /:/g" >> $out_file
+			$TOOLS_BIN/test_header_info --front_matter --results_file $out_file --host $to_configuration --sys_type $to_sys_type --tuned $to_tuned_setting --results_version $results_version --test_name $test_name
+			meta=`head -1 $results`
+			$TOOLS_BIN/test_header_info --test_name ${test_name} --meta_output "$meta" --results_file $out_file
+	  		tail -n +2  $results | tr -s ' ' | sed "s/^ //g" | sed "s/ /:/g" >> $out_file
   		done
 		if [ $sleep_for -ne 0 ];then
 			if [ $iteration -ne $to_times_to_run ]; then
