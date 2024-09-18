@@ -167,7 +167,7 @@ size_platform()
 		else
 			MPI_PATH=/usr/
 		fi
-		family=$(grep "CPU family" $LSCPU | cut -d: -f 2)
+		family=$(grep "^CPU family" $LSCPU | cut -d: -f 2)
 		#
 		# Strip off the weird marketing names
 		# Due to AWS being stupid on the naming, we need to
