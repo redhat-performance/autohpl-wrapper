@@ -200,7 +200,7 @@ size_platform()
 	fi
 	model=$(grep "Model:" $LSCPU | cut -d: -f 2|sed -e s/^[[:space:]]*//g -e s/[[:space:]]*$//g)
 	stepping=$(grep "Stepping:" $LSCPU | cut -d: -f 2)
-	nodes=`test_tools/detect_numa`
+	nodes=`$TOOLS_BIN/detect_numa`
 	echo nodes $nodes
 	totcpus=$(grep "^CPU(s):" $LSCPU | cut -d: -f 2)
 	thpcore=$(grep "^Thread(s)" $LSCPU | cut -d: -f 2)
@@ -614,7 +614,7 @@ install_run_hpl()
 		if [ $ubuntu -eq 1 ]; then  
 			pkgname="libopenblas-dev"
 		fi
-		test_tools/package_tool --packages $pkgname --no_packages $to_no_pkg_install
+		$TOOLS_BIN/package_tool --packages $pkgname --no_packages $to_no_pkg_install
 	fi
 
 	build_hpl 
@@ -625,6 +625,9 @@ use_mkl=0
 use_blis=0
 regression=0
 
+#
+# We are still operating at the level test tools was installed at.
+#
 source test_tools/general_setup "$@"
 
 ARGUMENT_LIST=(
@@ -707,7 +710,7 @@ if [ ${info} == "amzn2" ]; then
 fi
 
 ubuntu=0
-if [ "`test_tools/detect_os`" == "ubuntu" ]; then
+if [ "`$TOOLS_BIN/detect_os`" == "ubuntu" ]; then
 	ubuntu=1
 fi
 
@@ -759,7 +762,7 @@ else
 			fi
 		fi
 	done
-	${curdir}/test_tools/save_results --curdir $curdir --home_root $to_home_root --other_files "${curdir}/auto_hpl.out,*csv,test_results_report" --results /tmp/${test_name}.out  --test_name $test_name --tuned_setting=$to_tuned_setting --version NONE --user $to_user
+	$TOOLS_BIN/save_results --curdir $curdir --home_root $to_home_root --other_files "${curdir}/auto_hpl.out,*csv,test_results_report" --results /tmp/${test_name}.out  --test_name $test_name --tuned_setting=$to_tuned_setting --version NONE --user $to_user
 fi
 exit 0
 
