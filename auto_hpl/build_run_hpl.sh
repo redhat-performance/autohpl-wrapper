@@ -428,7 +428,7 @@ check_mpi()
 				exit_out "Error: yum install openmpi openmpi-devel" 1
 			fi
 		fi
-		which mpirun >> /dev/null 2>&1
+		which mpirun > /dev/null 2>&1
 		# MPI module isn't loaded, go ahead and load it
 		if [ $? -ne 0 ]; then
 			source /etc/profile.d/modules.sh
@@ -436,7 +436,7 @@ check_mpi()
 			if [ $? -ne 0 ]; then
 				exit_out "module load mpi/openmpi-${arch} failed, exiting" 1
 			fi
-			which mpirun >> /dev/null 2>&1
+			which mpirun > /dev/null 2>&1
 			if [ $? -ne 0 ]; then
 				exit_out "Error: mpirun not in path. exiting" 1
 			fi
@@ -449,7 +449,7 @@ check_mpi()
 		fi
 		#
 		# Above loaded openmpi*
-		which mpirun >> /dev/null 2>&1
+		which mpirun > /dev/null 2>&1
 		if [[ $? != 0 ]]; then
 			exit_out "could not find mpirun" 1
 		fi
