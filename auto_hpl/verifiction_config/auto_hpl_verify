@@ -1,0 +1,7 @@
+Required_Systems: intel
+Via_Zathras: No
+Systems: autohpl_sys
+test:--iterations 1:base_test_results/auto_hpl_base//base_line
+test:--iterations 1 --use_mkl:base_test_results/auto_mkl_results_file
+test:--iterations 1 --blis_lib:base_test_results/auto_hpl_base/blis
+test:--iterations 1 --resgression:base_test_results/auto_hpl_base/regression
