@@ -1,8 +1,8 @@
 # Test general meta start
 # Test: auto_hpl
 # Results version: 1.0
-# Host: n42-h24-000-r760.rdu3.labs.perfscale.redhat.com
-# Sys environ: n42-h24-000-r760.rdu3.labs.perfscale.redhat.com
+# Host: host
+# Sys environ: host
 # Tuned: throughput-performance
 # OS: 5.14.0-284.11.1.el9_2.x86_64
 # Numa nodes: 2
