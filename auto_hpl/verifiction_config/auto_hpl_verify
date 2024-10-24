@@ -1,6 +1,6 @@
-Required_Systems: intel
+Required_Systems: intel,amd,arm
 Via_Zathras: No
-Systems: autohpl_sys
+fields: 1:s,2:n,3:n,4:n,5:n,6:n;7:n
 test:--iterations 1:base_test_results/auto_hpl_base//base_line
 test:--iterations 1 --use_mkl:base_test_results/auto_mkl_results_file
 test:--iterations 1 --blis_lib:base_test_results/auto_hpl_base/blis
