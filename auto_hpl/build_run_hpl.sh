@@ -155,8 +155,8 @@ size_platform()
 {
 	LSCPU="$(mktemp /tmp/lscpu.XXXXXX)"
 	/usr/bin/lscpu > $LSCPU
-	arch=$(grep "Architecture:" $LSCPU | cut -d: -f 2|sed s/\ //g)
-	vendor=$(grep "Vendor ID:" $LSCPU | cut -d: -f 2|tr -cd '[:alnum:]' | sed -e s/^[[:space:]]*//g -e s/[[:space:]]*$//g)
+	arch=$(grep "^Architecture:" $LSCPU | cut -d: -f 2|sed s/\ //g)
+	vendor=$(grep "^Vendor ID:" $LSCPU | cut -d: -f 2|tr -cd '[:alnum:]' | sed -e s/^[[:space:]]*//g -e s/[[:space:]]*$//g)
 	if [[ "$arch" == "x86_64" ]]; then
 		BLAS_MT=1 #Set 1 to use Multi-thread BLAS, 0 for single thread
 
