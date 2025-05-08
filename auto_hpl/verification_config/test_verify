@@ -1,0 +1,6 @@
+Required_Systems: intel,amd,arm
+Via_Zathras: No
+T/V:s,N:n,NB:n,P:n,Q:n,Time:n,Gflops:s
+test:--iterations 1:base_test_results/test1/verify
+test:--iterations 1 --regression:base_test_results/test1/verify
+
