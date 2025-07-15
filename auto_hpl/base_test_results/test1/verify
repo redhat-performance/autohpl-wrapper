@@ -1,3 +1,39 @@
+#
+# Main reg exp summary
+#
+#   Field 2: Test namere digits,
+#   Field 1: One or more digits,
+#   Field 2: a numerical field
+#   Field 3: a numerical field
+#   Field 4: a numerical field
+#   Field 5: a numerical fieldd
+#   Field 6: a non-zero scientific notation value
+#
+# Detailed description
+#
+#  "WR12R2R4:[[:digit:]]{1,}:[0-9]{1,}:[0-9]{1,}:[0-9]{1,}:[0-9.]{1,}:[1-9]+\.[0-9]+e[+-][0-9]+$": This is the regular expression pattern enclosed in double quotes. Let's dissect it piece by piece:
+#
+#   WR12R2R4:
+#     This matches the literal string "WR12R2R4".
+#  [[:digit:]]{1,}:
+#      Matches one or more decimal digits (0-9).
+#  [0-9]{1,}:
+#      Matches one or more digits (0-9).
+#  [0-9]{1,}: Matches one or more digits.
+#      Matches one or more digits (0-9).
+#  [0-9]{1,}: Matches one or more digits.
+#      Matches one or more digits (0-9).
+#  [0-9.]{1,}: Matches one or more occurrences of either a digit (0-9) or a literal dot (.).
+#      Matches one or more digits (0-9).
+#  [1-9]+\.[0-9]+e[+-][0-9]+$
+#      [1-9]+: Matches one or more non-zero digits (1-9).
+#      \.: Matches a literal dot (.).
+#      [0-9]+: Matches one or more digits (0-9).
+#      e: Matches a literal "e".
+#      [+-]: Matches either a plus sign (+) or a minus sign (-).
+#      [0-9]+: Matches one or more digits (0-9).
+#      $: This is an anchor that matches the end of the line
+#
 %_header
 T/V:N:NB:P:Q:Time:Gflops
-WR12R2R4:[[:digit:]]{1,}:[0-9]{1,}:[0-9]{1,}:[0-9]{1,}:[0-9.]{1,}:[-+]?((0\.[0-9]*[1-9])|([1-9][0-9]*(\.[0-9]*)?))([eE][-+]?[0-9]+)?$
+WR12R2R4:[[:digit:]]{1,}:[0-9]{1,}:[0-9]{1,}:[0-9]{1,}:[0-9.]{1,}:[1-9]+\.[0-9]+e[+-][0-9]+$

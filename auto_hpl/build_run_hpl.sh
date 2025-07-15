@@ -26,6 +26,7 @@
 export LANG=C
 arguments="$@"
 results_version="1.0"
+rtc=$?
 
 exit_out()
 {
@@ -762,12 +763,8 @@ else
 	done
 	cp $out_file results_auto_hpl.csv
 	$TOOLS_BIN/validate_line --results_file results_auto_hpl.csv --base_results_file $run_dir/base_test_results/test1/verify
-	if [[ $? -eq 0 ]]; then
-		echo Ran >> test_results_report
-	else
-		echo Failed >> test_results_report
-	fi
+	rtc=$?
 	$TOOLS_BIN/save_results --curdir $curdir --home_root $to_home_root --other_files "${curdir}/auto_hpl.out,*csv,test_results_report" --results $out_file  --test_name $test_name --tuned_setting=$to_tuned_setting --version NONE --user $to_user
 fi
-exit 0
+exit $rtc
 
