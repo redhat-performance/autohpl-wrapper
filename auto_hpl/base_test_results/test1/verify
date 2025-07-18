@@ -5,8 +5,8 @@
 #
 #  Field 1 (T/V) WR12R2R4: Wall time / encoded variant. Exact match.
 #  Field 2 (N) [1-9][0-9]{0,}: The order of the coefficient matrix.  Positive non-zero value.
-#  Field 3 (NB) [1-9][0-9]{0,}: The partitioning blocking factor. Positive non-zero value
-#  Field 4 (P)  [1-9][0-9]{0,}: The number of process rows.  Positive non-zero value
+#  Field 3 (NB) [1-9][0-9]{0,}: The partitioning blocking factor. Positive non-zero value.
+#  Field 4 (P)  [1-9][0-9]{0,}: The number of process rows.  Positive non-zero value.
 #  Field 5 (Q)  [1-9][0-9]{0,}: The number of process columns. Positive non-zero value.
 #  Field 6 (Time) [1-9][0-9]{0,}: Time in seconds to solve the linear system. Positive non-zero value.
 #  Field 7 (Gflops) [1-9]+\.[0-9]+e[+-][0-9]+$: Rate of execution (in Gflops) for solving the linear system.  Positive non-zero scientific notation.
