@@ -1,7 +1,7 @@
 #  regexp explanation
 #
 #  T/V:N:NB:P:Q:Time:Gflops
-#  "WR12R2R4:[1-9][0-9]{0,}:[1-9][0-9]{0,}:[1-9][0-9]{0,}:[1-9][0-9]{0,}:[1-9][0-9]{0,}:[1-9]+\.[0-9]+e[+-][0-9]+$"
+#  "WR12R2R4:[1-9][0-9]{0,}:[1-9][0-9]{0,}:[1-9][0-9]{0,}:[1-9][0-9]{0,}:[1-9][0-9\.]{0,}:[1-9]+\.[0-9]+e[+-][0-9]+$"
 #
 #  Field 1 (T/V) WR12R2R4: Wall time / encoded variant. Exact match.
 #  Field 2 (N) [1-9][0-9]{0,}: The order of the coefficient matrix.  Positive non-zero value.
