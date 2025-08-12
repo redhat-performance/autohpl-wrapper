@@ -26,6 +26,7 @@
 export LANG=C
 arguments="$@"
 results_version="1.0"
+rtc=$?
 
 exit_out()
 {
@@ -748,12 +749,6 @@ else
 		cp ${curdir}/meta_data*.yml .
 		${curdir}/test_tools/move_data $curdir ${RESULTSDIR}
   		for results in `ls -d *log`; do
-			lines=`wc -l ${results} | cut -d' ' -f1`
-			if [ $lines -eq 1 ]; then
-				echo Failed >> test_results_report
-			else
-				echo Ran >> test_results_report
-			fi
 	  		out_file=`echo $results | sed "s/\.log/\.csv/g"`
 			$TOOLS_BIN/test_header_info --front_matter --results_file $out_file --host $to_configuration --sys_type $to_sys_type --tuned $to_tuned_setting --results_version $results_version --test_name $test_name
 			meta=`head -1 $results`
@@ -766,7 +761,10 @@ else
 			fi
 		fi
 	done
-	$TOOLS_BIN/save_results --curdir $curdir --home_root $to_home_root --other_files "${curdir}/auto_hpl.out,*csv,test_results_report" --results /tmp/${test_name}.out  --test_name $test_name --tuned_setting=$to_tuned_setting --version NONE --user $to_user
+	cp $out_file results_auto_hpl.csv
+	$TOOLS_BIN/validate_line --results_file results_auto_hpl.csv --base_results_file $run_dir/base_test_results/test1/verify
+	rtc=$?
+	$TOOLS_BIN/save_results --curdir $curdir --home_root $to_home_root --other_files "${curdir}/auto_hpl.out,*csv,test_results_report" --results $out_file  --test_name $test_name --tuned_setting=$to_tuned_setting --version NONE --user $to_user
 fi
-exit 0
+exit $rtc
 
