@@ -125,8 +125,6 @@ fi
 # to_home_root: home directory
 # to_configuration: configuration information
 # to_times_to_run: number of times to run the test
-# to_pbench: Run the test via pbench
-# to_puser: User running pbench
 # to_run_label: Label for the run
 # to_user: User on the test system running the test
 # to_sys_type: for results info, basically aws, azure or local
@@ -731,13 +729,6 @@ run_times=0
 # Gather hardware information
 ${curdir}/test_tools/gather_data ${curdir}
 
-if [ $to_pbench -eq 1 ];then
-	source ~/.bashrc
-
-  	$TOOLS_BIN/execute_via_pbench --cmd_executing "$0" $arguments --test auto_hpl --spacing 11
-  	cd /tmp
-  	cp results_auto_hpl_${to_tuned_setting}.tar results_pbench_auto_hpl_${to_tuned_setting}.tar
-else
 	range=`seq 1 1 $to_times_to_run`
 	for iteration in $range; do
   		install_run_hpl
@@ -765,6 +756,4 @@ else
 	$TOOLS_BIN/validate_line --results_file results_auto_hpl.csv --base_results_file $run_dir/base_test_results/test1/verify
 	rtc=$?
 	$TOOLS_BIN/save_results --curdir $curdir --home_root $to_home_root --other_files "${curdir}/auto_hpl.out,*csv,test_results_report" --results $out_file  --test_name $test_name --tuned_setting=$to_tuned_setting --version NONE --user $to_user
-fi
 exit $rtc
-
