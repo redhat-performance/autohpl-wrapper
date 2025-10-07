@@ -579,8 +579,8 @@ run_hpl()
 		hpl_result_line=$(grep -E "WC|WR" hpl.out)
 		if [[ -n "$hpl_result_line" ]]; then
 			read time_val gflops_val <<< $(echo "$hpl_result_line" | awk '{print $(NF-1), $NF}')
- 			result2pcp hpl.time "$time_val"
- 			result2pcp hpl.gflops "$gflops_val"
+ 			result2pcp hpl_time "$time_val"
+ 			result2pcp hpl_gflops "$gflops_val"
 		fi
 	fi
 	done
