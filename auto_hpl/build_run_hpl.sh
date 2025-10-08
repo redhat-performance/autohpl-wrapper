@@ -120,21 +120,16 @@ if [ ! -d "test_tools" ]; then
 fi
 
 # Variables set by general setup.
-#
 # TOOLS_BIN: points to the tool directory
 # to_home_root: home directory
 # to_configuration: configuration information
 # to_times_to_run: number of times to run the test
-# to_pbench: Run the test via pbench
-# to_puser: User running pbench
 # to_run_label: Label for the run
 # to_user: User on the test system running the test
 # to_sys_type: for results info, basically aws, azure or local
 # to_sysname: name of the system
 # to_tuned_setting: tuned setting
-#
 
-#
 # wrapper specific code.
 #
 
@@ -580,6 +575,14 @@ run_hpl()
 	do
 		$MPI_PATH/bin/mpirun --allow-run-as-root -np $num_mpi --mca btl self,vader --report-bindings $bind_settings ./xhpl 2>&1 > hpl.out
 		cat hpl.out | grep -E "WC|WR"  >> $outfile
+	if [[ $to_use_pcp -eq 1 ]]; then
+		hpl_result_line=$(grep -E "WC|WR" hpl.out)
+		if [[ -n "$hpl_result_line" ]]; then
+			read time_val gflops_val <<< $(echo "$hpl_result_line" | awk '{print $(NF-1), $NF}')
+ 			result2pcp hpl_time "$time_val"
+ 			result2pcp hpl_gflops "$gflops_val"
+		fi
+	fi
 	done
 	cp $outfile $SCRIPT_DIR
 	cd $SCRIPT_DIR
@@ -731,40 +734,58 @@ run_times=0
 # Gather hardware information
 ${curdir}/test_tools/gather_data ${curdir}
 
-if [ $to_pbench -eq 1 ];then
-	source ~/.bashrc
-
-  	$TOOLS_BIN/execute_via_pbench --cmd_executing "$0" $arguments --test auto_hpl --spacing 11
-  	cd /tmp
-  	cp results_auto_hpl_${to_tuned_setting}.tar results_pbench_auto_hpl_${to_tuned_setting}.tar
-else
-	range=`seq 1 1 $to_times_to_run`
-	for iteration in $range; do
-  		install_run_hpl
-  		pushd /tmp/results_auto_hpl_${to_tuned_setting} > /dev/null
-		rdir=results_${iteration}
-		mkdir $rdir
-		mv hpl* $rdir
-		cd $rdir
-		cp ${curdir}/meta_data*.yml .
-		${curdir}/test_tools/move_data $curdir ${RESULTSDIR}
-  		for results in `ls -d *log`; do
-	  		out_file=`echo $results | sed "s/\.log/\.csv/g"`
-			$TOOLS_BIN/test_header_info --front_matter --results_file $out_file --host $to_configuration --sys_type $to_sys_type --tuned $to_tuned_setting --results_version $results_version --test_name $test_name
-			meta=`head -1 $results`
-			$TOOLS_BIN/test_header_info --test_name ${test_name} --meta_output "$meta" --results_file $out_file
-	  		tail -n +2  $results | tr -s ' ' | sed "s/^ //g" | sed "s/ /:/g" >> $out_file
-  		done
-		if [ $sleep_for -ne 0 ];then
-			if [ $iteration -ne $to_times_to_run ]; then
-				sleep $sleep_for
-			fi
-		fi
-	done
-	cp $out_file results_auto_hpl.csv
-	$TOOLS_BIN/validate_line --results_file results_auto_hpl.csv --base_results_file $run_dir/base_test_results/test1/verify
-	rtc=$?
-	$TOOLS_BIN/save_results --curdir $curdir --home_root $to_home_root --other_files "${curdir}/auto_hpl.out,*csv,test_results_report" --results $out_file  --test_name $test_name --tuned_setting=$to_tuned_setting --version NONE --user $to_user
+#Setup and start PCP if --use_pcp is passed
+# using pdir 
+pdir=""
+if [[ $to_use_pcp -eq 1 ]]; then
+    source $TOOLS_BIN/pcp/pcp_commands.inc
+    setup_pcp
+    pcp_cfg=$TOOLS_BIN/pcp/default.cfg
+    pcpdir=/tmp/pcp_`date "+%Y.%m.%d-%H.%M.%S"`
+    pdir="--copy_dir $pcpdir"
+    echo "Start PCP"
+    start_pcp ${pcpdir}/ ${test_name} $pcp_cfg
 fi
-exit $rtc
 
+range=`seq 1 1 $to_times_to_run`
+for iteration in $range; do
+	#start PCP subset for iterations
+	if [[ $to_use_pcp -eq 1 ]]; then
+       	    start_pcp_subset
+	fi
+	install_run_hpl
+	pushd /tmp/results_auto_hpl_${to_tuned_setting} > /dev/null
+	rdir=results_${iteration}
+	mkdir $rdir
+	mv hpl* $rdir
+	cd $rdir
+	cp ${curdir}/meta_data*.yml .
+	${curdir}/test_tools/move_data $curdir ${RESULTSDIR}
+	for results in `ls -d *log`; do
+  		out_file=`echo $results | sed "s/\.log/\.csv/g"`
+		$TOOLS_BIN/test_header_info --front_matter --results_file $out_file --host $to_configuration --sys_type $to_sys_type --tuned $to_tuned_setting --results_version $results_version --test_name $test_name
+		meta=`head -1 $results`
+		$TOOLS_BIN/test_header_info --test_name ${test_name} --meta_output "$meta" --results_file $out_file
+  		tail -n +2  $results | tr -s ' ' | sed "s/^ //g" | sed "s/ /:/g" >> $out_file
+	done
+	# stop PCP subset for iterations
+	if [[ $to_use_pcp -eq 1 ]]; then
+      	    echo "Send result to PCP archive for iteration $iteration"
+            stop_pcp_subset
+	fi
+	if [ $sleep_for -ne 0 ];then
+		if [ $iteration -ne $to_times_to_run ]; then
+			sleep $sleep_for
+		fi
+	fi
+done
+if [[ $to_use_pcp -eq 1 ]]; then
+	echo "Stop PCP"
+	stop_pcp
+	shutdown_pcp
+fi
+cp $out_file results_auto_hpl.csv
+$TOOLS_BIN/validate_line --results_file results_auto_hpl.csv --base_results_file $run_dir/base_test_results/test1/verify
+rtc=$?
+$TOOLS_BIN/save_results --curdir $curdir --home_root $to_home_root --other_files "${curdir}/auto_hpl.out,*csv,test_results_report" --results $out_file  --test_name $test_name --tuned_setting=$to_tuned_setting --version NONE --user $to_user $pdir
+exit $rtc
