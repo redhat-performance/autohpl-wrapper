@@ -1,0 +1,41 @@
+{
+  "dependencies": {
+    "rhel": [
+      "gcc",
+      "make",
+      "gcc-gfortran",
+      "wget",
+      "bc",
+      "perf",
+      "git"
+    ],
+    "amazon": [
+      "gcc",
+      "make",
+      "gcc-gfortran",
+      "wget",
+      "bc",
+      "perf",
+      "git"
+    ],
+    "ubuntu": [
+      "gcc",
+      "make",
+      "gfortran",
+      "wget",
+      "bc",
+      "linux-tools-common",
+      "linux-tools-generic",
+      "git"
+    ],
+    "suse": [
+      "gcc",
+      "make",
+      "gcc-fortran",
+      "wget",
+      "bc",
+      "perf",
+      "git"
+    ]
+  }
+}

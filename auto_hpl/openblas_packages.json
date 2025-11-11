@@ -1,0 +1,30 @@
+{
+  "dependencies": {
+    "rhel": [
+      "openblas-openmp",
+      "openblas-devel",
+      "openmpi",
+      "openmpi-devel"
+    ],
+    "amazon": {
+      "2023": [
+        "openblas-devel",
+        "openmpi",
+        "openmpi-devel"
+      ],
+      "default": []
+    },
+    "ubuntu": [
+      "libopenblas-dev",
+      "libopenblas-openmp-dev",
+      "openmpi-bin",
+      "openmpi-common"
+    ],
+    "suse": [
+      "openblas-devel",
+      "openblas-openmp-devel",
+      "openmpi",
+      "openmpi-devel"
+    ]
+  }
+}

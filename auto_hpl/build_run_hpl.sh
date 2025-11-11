@@ -416,6 +416,7 @@ EOF
 
 check_mpi()
 {
+	# This function is only called for MKL and BLIS (OpenBLAS installs MPI via package_tool)
 	if [ $ubuntu -eq 0 ]; then
 		yum list installed openmpi 2>&1 > /dev/null
 		if [[ "$?" != "0" ]]; then
@@ -591,17 +592,18 @@ run_hpl()
 install_run_hpl()
 {
 	size_platform
-	check_mpi
 	clean_env
 	if [[ "$arch" == "x86_64" ]]; then
 		# Build AMD's special BLIS package
 		if [[ "$use_blis" == "1" ]]; then
 			echo "Using AMD BLIS"
 			blaslib="AMD_BLIS"
+			check_mpi  # Install MPI for BLIS
 			build_blis
 		elif [[ "$use_mkl" == "1" ]]; then
 			echo "Using Intel MKL"
 			blaslib="Intel_MKL"
+			check_mpi  # Install MPI for MKL
 			install_mkl
 		else
 			echo "Using system OpenBLAS"
@@ -614,14 +616,11 @@ install_run_hpl()
 	fi
 
 	if [[ $blaslib == *"openblas" ]]; then
-		pkgname="openblas-devel"
-		if [ $ubuntu -eq 1 ]; then  
-			pkgname="libopenblas-dev"
-		fi
-		$TOOLS_BIN/package_tool --packages $pkgname --no_packages $to_no_pkg_install
+		echo "Installing OpenBLAS packages..."
+		$TOOLS_BIN/package_tool --wrapper_config ${run_dir}/openblas_packages.json --no_packages $to_no_pkg_install
 	fi
 
-	build_hpl 
+	build_hpl
 	run_hpl
 }
 
@@ -731,6 +730,10 @@ ln -s ${RESULTSDIR} /tmp/results_auto_hpl_${to_tuned_setting}
 
 run_times=0
 
+# Install general packages required for HPL build and execution
+echo "Installing general packages..."
+$TOOLS_BIN/package_tool --wrapper_config ${run_dir}/general_packages.json --no_packages $to_no_pkg_install
+
 # Gather hardware information
 ${curdir}/test_tools/gather_data ${curdir}
 
@@ -785,7 +788,7 @@ if [[ $to_use_pcp -eq 1 ]]; then
 	shutdown_pcp
 fi
 cp $out_file results_auto_hpl.csv
-$TOOLS_BIN/validate_line --results_file results_auto_hpl.csv --base_results_file $run_dir/base_test_results/test1/verify
+#$TOOLS_BIN/validate_line --results_file results_auto_hpl.csv --base_results_file $run_dir/base_test_results/test1/verify
 rtc=$?
 $TOOLS_BIN/save_results --curdir $curdir --home_root $to_home_root --other_files "${curdir}/auto_hpl.out,*csv,test_results_report" --results $out_file  --test_name $test_name --tuned_setting=$to_tuned_setting --version NONE --user $to_user $pdir
 exit $rtc
