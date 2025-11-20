@@ -428,10 +428,23 @@ check_mpi()
 		which mpirun > /dev/null 2>&1
 		# MPI module isn't loaded, go ahead and load it
 		if [ $? -ne 0 ]; then
-			source /etc/profile.d/modules.sh
-			module load mpi/openmpi-${arch}
-			if [ $? -ne 0 ]; then
-				exit_out "module load mpi/openmpi-${arch} failed, exiting" 1
+			# RHEL 10+ doesn't use environment modules for MPI
+			if [[ "$rhel_ver" == "10" ]] || [[ ! -f /etc/profile.d/modules.sh ]]; then
+				# Add MPI to PATH directly
+				if [ -d /usr/lib64/openmpi/bin ]; then
+					export PATH=/usr/lib64/openmpi/bin:$PATH
+					export LD_LIBRARY_PATH=/usr/lib64/openmpi/lib:$LD_LIBRARY_PATH
+				elif [ -d /usr/lib/openmpi/bin ]; then
+					export PATH=/usr/lib/openmpi/bin:$PATH
+					export LD_LIBRARY_PATH=/usr/lib/openmpi/lib:$LD_LIBRARY_PATH
+				fi
+			else
+				# RHEL 8/9 use environment modules
+				source /etc/profile.d/modules.sh
+				module load mpi/openmpi-${arch}
+				if [ $? -ne 0 ]; then
+					exit_out "module load mpi/openmpi-${arch} failed, exiting" 1
+				fi
 			fi
 			which mpirun > /dev/null 2>&1
 			if [ $? -ne 0 ]; then

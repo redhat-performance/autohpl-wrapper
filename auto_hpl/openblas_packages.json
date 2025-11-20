@@ -1,11 +1,20 @@
 {
   "dependencies": {
-    "rhel": [
-      "openblas-openmp",
-      "openblas-devel",
-      "openmpi",
-      "openmpi-devel"
-    ],
+    "rhel": {
+      "10": [
+        "flexiblas",
+        "flexiblas-devel",
+        "flexiblas-openblas-openmp",
+        "openmpi",
+        "openmpi-devel"
+      ],
+      "default": [
+        "openblas-openmp",
+        "openblas-devel",
+        "openmpi",
+        "openmpi-devel"
+      ]
+    },
     "amazon": {
       "2023": [
         "openblas-devel",

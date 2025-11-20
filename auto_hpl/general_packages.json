@@ -7,7 +7,9 @@
       "wget",
       "bc",
       "perf",
-      "git"
+      "git",
+      "zip",
+      "unzip"
     ],
     "amazon": [
       "gcc",
@@ -16,7 +18,9 @@
       "wget",
       "bc",
       "perf",
-      "git"
+      "git",
+      "zip",
+      "unzip"
     ],
     "ubuntu": [
       "gcc",
@@ -26,7 +30,9 @@
       "bc",
       "linux-tools-common",
       "linux-tools-generic",
-      "git"
+      "git",
+      "zip",
+      "unzip"
     ],
     "suse": [
       "gcc",
@@ -35,7 +41,9 @@
       "wget",
       "bc",
       "perf",
-      "git"
+      "git",
+      "zip",
+      "unzip"
     ]
   }
 }
