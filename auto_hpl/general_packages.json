@@ -11,7 +11,7 @@
       "zip",
       "unzip"
     ],
-    "amazon": [
+    "amzn": [
       "gcc",
       "make",
       "gcc-gfortran",
@@ -20,7 +20,9 @@
       "perf",
       "git",
       "zip",
-      "unzip"
+      "unzip",
+      "numactl",
+      "dmidecode"
     ],
     "ubuntu": [
       "gcc",

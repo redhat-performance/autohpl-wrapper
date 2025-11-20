@@ -15,14 +15,11 @@
         "openmpi-devel"
       ]
     },
-    "amazon": {
-      "2023": [
-        "openblas-devel",
-        "openmpi",
-        "openmpi-devel"
-      ],
-      "default": []
-    },
+    "amzn": [
+      "openblas-devel",
+      "openmpi",
+      "openmpi-devel"
+    ],
     "ubuntu": [
       "libopenblas-dev",
       "libopenblas-openmp-dev",
