@@ -710,7 +710,7 @@ done
 
 info=`uname -a | cut -d' ' -f3 | cut -d'.' -f5`
 aws=0
-if [ ${info} == "amzn2" ]; then
+if [ "${info}" == "amzn2" ]; then
 	aws=1
 	mkdir src
 	pushd src

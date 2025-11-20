@@ -27,7 +27,8 @@
       "libopenblas-dev",
       "libopenblas-openmp-dev",
       "openmpi-bin",
-      "openmpi-common"
+      "openmpi-common",
+      "libopenmpi-dev"
     ],
     "suse": [
       "openblas-devel",
