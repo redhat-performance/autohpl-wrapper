@@ -629,8 +629,14 @@ install_run_hpl()
 	fi
 
 	if [[ $blaslib == *"openblas" ]]; then
-		echo "Installing OpenBLAS packages..."
-		$TOOLS_BIN/package_tool --wrapper_config ${run_dir}/openblas_packages.json --no_packages $to_no_pkg_install
+		# Amazon Linux 2 compiles OpenBLAS from source (see lines 713-726)
+		# so skip package installation for AL2
+		if [[ "$($TOOLS_BIN/detect_os)" == "amzn" && "$($TOOLS_BIN/detect_os --os-version)" == "2" ]]; then
+			echo "Amazon Linux 2: Using OpenBLAS compiled from source"
+		else
+			echo "Installing OpenBLAS packages..."
+			$TOOLS_BIN/package_tool --wrapper_config ${run_dir}/openblas_packages.json --no_packages $to_no_pkg_install
+		fi
 	fi
 
 	build_hpl

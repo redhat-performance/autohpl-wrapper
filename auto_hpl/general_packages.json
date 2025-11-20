@@ -22,7 +22,9 @@
       "zip",
       "unzip",
       "numactl",
-      "dmidecode"
+      "dmidecode",
+      "openmpi",
+      "openmpi-devel"
     ],
     "ubuntu": [
       "gcc",
