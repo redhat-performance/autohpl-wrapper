@@ -156,7 +156,10 @@ size_platform()
 	if [[ "$arch" == "x86_64" ]]; then
 		BLAS_MT=1 #Set 1 to use Multi-thread BLAS, 0 for single thread
 
-		if [ $ubuntu -eq 0 ]; then
+		if [[ "$($TOOLS_BIN/detect_os)" == "sles" ]]; then
+			SLES_MPI_DIR=$(ls -d /usr/lib64/mpi/gcc/openmpi* 2>/dev/null | head -1)
+			MPI_PATH=${SLES_MPI_DIR}
+		elif [ $ubuntu -eq 0 ]; then
 			MPI_PATH=/usr/lib64/openmpi
 		elif [ $aws -eq 1 ]; then
 			MPI_PATH=/usr/lib64/openmpi/bin/
@@ -184,7 +187,10 @@ size_platform()
 		fi
 	elif [[ "$arch" == "aarch64" ]]; then
 		BLAS_MT=1
-		if [ $ubuntu -eq 0 ]; then
+		if [[ "$($TOOLS_BIN/detect_os)" == "sles" ]]; then
+			SLES_MPI_DIR=$(ls -d /usr/lib64/mpi/gcc/openmpi* 2>/dev/null | head -1)
+			MPI_PATH=${SLES_MPI_DIR}
+		elif [ $ubuntu -eq 0 ]; then
 			MPI_PATH=/usr/lib64/openmpi
 		elif [ $aws -eq 1 ]; then
 			MPI_PATH=/usr/lib64/openmpi/bin/
@@ -464,6 +470,23 @@ check_mpi()
 			exit_out "could not find mpirun" 1
 		fi
 	fi
+
+	# SLES: MPI is installed in /usr/lib64/mpi/gcc/openmpi*/ and needs PATH setup
+	if [[ "$($TOOLS_BIN/detect_os)" == "sles" ]]; then
+		which mpirun > /dev/null 2>&1
+		if [ $? -ne 0 ]; then
+			# Find openmpi directory (could be openmpi4, openmpi5, etc.)
+			SLES_MPI_DIR=$(ls -d /usr/lib64/mpi/gcc/openmpi* 2>/dev/null | head -1)
+			if [ -n "$SLES_MPI_DIR" ]; then
+				export PATH=$SLES_MPI_DIR/bin:$PATH
+				export LD_LIBRARY_PATH=$SLES_MPI_DIR/lib64:$LD_LIBRARY_PATH
+			fi
+			which mpirun > /dev/null 2>&1
+			if [ $? -ne 0 ]; then
+				exit_out "Error: mpirun not found in PATH after SLES MPI setup" 1
+			fi
+		fi
+	fi
 }
 
 build_blis()
@@ -540,6 +563,9 @@ build_hpl()
 	fi
 	if [ $aws -eq 1 ]; then
 		makefile=Make.Linux_${blaslib}_aws
+	fi
+	if [[ "$($TOOLS_BIN/detect_os)" == "sles" ]]; then
+		makefile=Make.Linux_${blaslib}_sles
 	fi
 	echo "sed s,TOPDIR,$run_dir, ${run_dir}/${makefile} > Make.Linux_${blaslib}"
 	sed s,TOPDIR,$run_dir, ${run_dir}/${makefile} > Make.Linux_${blaslib}
@@ -636,6 +662,23 @@ install_run_hpl()
 		else
 			echo "Installing OpenBLAS packages..."
 			$TOOLS_BIN/package_tool --wrapper_config ${run_dir}/openblas_packages.json --no_packages $to_no_pkg_install
+		fi
+
+		# SLES: Set up MPI PATH (MPI installed but not in PATH by default)
+		if [[ "$($TOOLS_BIN/detect_os)" == "sles" ]]; then
+			which mpirun > /dev/null 2>&1
+			if [ $? -ne 0 ]; then
+				SLES_MPI_DIR=$(ls -d /usr/lib64/mpi/gcc/openmpi* 2>/dev/null | head -1)
+				if [ -n "$SLES_MPI_DIR" ]; then
+					export PATH=$SLES_MPI_DIR/bin:$PATH
+					export LD_LIBRARY_PATH=$SLES_MPI_DIR/lib64:$LD_LIBRARY_PATH
+					export CPATH=$SLES_MPI_DIR/include:$CPATH
+				fi
+				which mpirun > /dev/null 2>&1
+				if [ $? -ne 0 ]; then
+					exit_out "Error: mpirun not found in PATH after SLES MPI setup" 1
+				fi
+			fi
 		fi
 	fi
 

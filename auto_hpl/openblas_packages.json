@@ -26,6 +26,11 @@
       "openmpi-bin",
       "openmpi-common",
       "libopenmpi-dev"
+    ],
+    "sles": [
+      "openblas-devel",
+      "openmpi",
+      "openmpi-devel"
     ]
   }
 }

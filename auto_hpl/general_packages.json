@@ -38,6 +38,18 @@
       "zip",
       "unzip",
       "numactl"
+    ],
+    "sles": [
+      "gcc",
+      "make",
+      "gcc-fortran",
+      "wget",
+      "bc",
+      "perf",
+      "git",
+      "zip",
+      "unzip",
+      "numactl"
     ]
   }
 }
