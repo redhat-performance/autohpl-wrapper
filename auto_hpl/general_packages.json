@@ -32,18 +32,8 @@
       "linux-tools-generic",
       "git",
       "zip",
-      "unzip"
-    ],
-    "suse": [
-      "gcc",
-      "make",
-      "gcc-fortran",
-      "wget",
-      "bc",
-      "perf",
-      "git",
-      "zip",
-      "unzip"
+      "unzip",
+      "numactl"
     ]
   }
 }
