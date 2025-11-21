@@ -567,6 +567,10 @@ build_hpl()
 	if [[ "$($TOOLS_BIN/detect_os)" == "sles" ]]; then
 		makefile=Make.Linux_${blaslib}_sles
 	fi
+	# RHEL 10: Use RHEL 10-specific makefile (FlexiBLAS uses libopenblaso.so.0)
+	if [[ "$($TOOLS_BIN/detect_os)" == "rhel" && "$($TOOLS_BIN/detect_os --os-version)" == "10"* ]]; then
+		makefile=Make.Linux_${blaslib}_rhel10
+	fi
 	echo "sed s,TOPDIR,$run_dir, ${run_dir}/${makefile} > Make.Linux_${blaslib}"
 	sed s,TOPDIR,$run_dir, ${run_dir}/${makefile} > Make.Linux_${blaslib}
 	bindir=Linux_${blaslib}
@@ -585,6 +589,16 @@ clean_env()
 
 run_hpl()
 {
+	# RHEL 10: Set LD_LIBRARY_PATH for MPI runtime (works for both ARM and x86_64)
+	if [[ "$($TOOLS_BIN/detect_os)" == "rhel" ]]; then
+		rhel_ver=$($TOOLS_BIN/detect_os --os-version)
+		if [[ "$rhel_ver" == "10"* ]]; then
+			if [ -d /usr/lib64/openmpi/lib ]; then
+				export LD_LIBRARY_PATH=/usr/lib64/openmpi/lib:$LD_LIBRARY_PATH
+			fi
+		fi
+	fi
+
 	cd $HPL_PATH/hpl-$HPL_VER/bin/${bindir}
 
 	# ckup the existing HPL.dat file
@@ -677,6 +691,27 @@ install_run_hpl()
 				which mpirun > /dev/null 2>&1
 				if [ $? -ne 0 ]; then
 					exit_out "Error: mpirun not found in PATH after SLES MPI setup" 1
+				fi
+			fi
+		fi
+
+		# RHEL 10+: Set up MPI PATH (RHEL 10 doesn't use environment modules)
+		if [[ "$($TOOLS_BIN/detect_os)" == "rhel" ]]; then
+			rhel_ver=$($TOOLS_BIN/detect_os --os-version)
+			if [[ "$rhel_ver" == "10"* ]]; then
+				which mpirun > /dev/null 2>&1
+				if [ $? -ne 0 ]; then
+					if [ -d /usr/lib64/openmpi/bin ]; then
+						export PATH=/usr/lib64/openmpi/bin:$PATH
+						export LD_LIBRARY_PATH=/usr/lib64/openmpi/lib:$LD_LIBRARY_PATH
+					elif [ -d /usr/lib/openmpi/bin ]; then
+						export PATH=/usr/lib/openmpi/bin:$PATH
+						export LD_LIBRARY_PATH=/usr/lib/openmpi/lib:$LD_LIBRARY_PATH
+					fi
+					which mpirun > /dev/null 2>&1
+					if [ $? -ne 0 ]; then
+						exit_out "Error: mpirun not found in PATH after RHEL 10 MPI setup" 1
+					fi
 				fi
 			fi
 		fi

@@ -9,7 +9,9 @@
       "perf",
       "git",
       "zip",
-      "unzip"
+      "unzip",
+      "numactl",
+      "dmidecode"
     ],
     "amzn": [
       "gcc",
