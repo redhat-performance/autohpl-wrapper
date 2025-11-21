@@ -567,9 +567,15 @@ build_hpl()
 	if [[ "$($TOOLS_BIN/detect_os)" == "sles" ]]; then
 		makefile=Make.Linux_${blaslib}_sles
 	fi
-	# RHEL 10: Use RHEL 10-specific makefile (FlexiBLAS uses libopenblaso.so.0)
-	if [[ "$($TOOLS_BIN/detect_os)" == "rhel" && "$($TOOLS_BIN/detect_os --os-version)" == "10"* ]]; then
-		makefile=Make.Linux_${blaslib}_rhel10
+	# RHEL 9/10: Use RHEL-specific makefile for Intel (FlexiBLAS uses libopenblaso.so.0)
+	# AMD and ARM already have correct library name in default makefiles
+	if [[ "$($TOOLS_BIN/detect_os)" == "rhel" ]]; then
+		rhel_ver=$($TOOLS_BIN/detect_os --os-version)
+		if [[ "$rhel_ver" == "9"* && "$blaslib" == "Intel_openblas" ]]; then
+			makefile=Make.Linux_${blaslib}_rhel9
+		elif [[ "$rhel_ver" == "10"* ]]; then
+			makefile=Make.Linux_${blaslib}_rhel10
+		fi
 	fi
 	echo "sed s,TOPDIR,$run_dir, ${run_dir}/${makefile} > Make.Linux_${blaslib}"
 	sed s,TOPDIR,$run_dir, ${run_dir}/${makefile} > Make.Linux_${blaslib}
@@ -691,6 +697,27 @@ install_run_hpl()
 				which mpirun > /dev/null 2>&1
 				if [ $? -ne 0 ]; then
 					exit_out "Error: mpirun not found in PATH after SLES MPI setup" 1
+				fi
+			fi
+		fi
+
+		# RHEL 8/9: Load MPI module (uses environment modules)
+		if [[ "$($TOOLS_BIN/detect_os)" == "rhel" ]]; then
+			rhel_ver=$($TOOLS_BIN/detect_os --os-version)
+			if [[ "$rhel_ver" == "8"* || "$rhel_ver" == "9"* ]]; then
+				which mpirun > /dev/null 2>&1
+				if [ $? -ne 0 ]; then
+					if [[ -f /etc/profile.d/modules.sh ]]; then
+						source /etc/profile.d/modules.sh
+						module load mpi/openmpi-${arch}
+						if [ $? -ne 0 ]; then
+							exit_out "module load mpi/openmpi-${arch} failed, exiting" 1
+						fi
+					fi
+					which mpirun > /dev/null 2>&1
+					if [ $? -ne 0 ]; then
+						exit_out "Error: mpirun not in path after loading modules" 1
+					fi
 				fi
 			fi
 		fi
