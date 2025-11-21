@@ -701,10 +701,11 @@ install_run_hpl()
 			fi
 		fi
 
-		# RHEL 8/9: Load MPI module (uses environment modules)
-		if [[ "$($TOOLS_BIN/detect_os)" == "rhel" ]]; then
-			rhel_ver=$($TOOLS_BIN/detect_os --os-version)
-			if [[ "$rhel_ver" == "8"* || "$rhel_ver" == "9"* ]]; then
+		# RHEL 8/9 and AL2023: Load MPI module (uses environment modules)
+		if [[ "$($TOOLS_BIN/detect_os)" == "rhel" || "$($TOOLS_BIN/detect_os)" == "amzn" ]]; then
+			os_ver=$($TOOLS_BIN/detect_os --os-version)
+			# RHEL 8/9 or AL2023 use environment modules for MPI
+			if [[ "$os_ver" == "8"* || "$os_ver" == "9"* || "$os_ver" == "2023"* ]]; then
 				which mpirun > /dev/null 2>&1
 				if [ $? -ne 0 ]; then
 					if [[ -f /etc/profile.d/modules.sh ]]; then
