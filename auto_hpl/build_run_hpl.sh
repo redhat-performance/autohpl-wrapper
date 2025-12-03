@@ -519,8 +519,16 @@ build_hpl()
 				mpi_inc="/usr/include/openmpi"
 				;;
 		esac
+	elif [[ "$os" == "sles" ]]; then
+		# SLES uses /usr/lib64/mpi/gcc/openmpi* path
+		sles_mpi_dir=$(ls -d /usr/lib64/mpi/gcc/openmpi* 2>/dev/null | sort -V | tail -1)
+		if [ -n "$sles_mpi_dir" ]; then
+			mpi_inc="${sles_mpi_dir}/include"
+		else
+			mpi_inc="/usr/include/openmpi"
+		fi
 	else
-		# RHEL, Amazon Linux, SLES use include path
+		# RHEL, Amazon Linux use include path
 		case "$arch" in
 			x86_64)
 				mpi_inc="/usr/include/openmpi-x86_64"

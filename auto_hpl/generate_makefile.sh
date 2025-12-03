@@ -93,8 +93,19 @@ if [ -n "$BLAS_DIR" ]; then
             -e "s|^LAdir.*=.*|LAdir        = $BLAS_DIR|" \
             -e "s|^LAlib.*=.*|LAlib        = \$(LAdir)/lib/$BLAS_LIB|" \
             "$TEMPLATE" > "$OUTPUT"
+    elif [[ "$MPI_INC" == *"/mpi/gcc/openmpi"* ]]; then
+        # SLES uses /usr/lib64/mpi/gcc/openmpi* path with lib64 subdirectory
+        # Extract MPdir from MPI_INC by removing /include suffix
+        SLES_MPI_DIR="${MPI_INC%/include}"
+        sed -e "s|^ARCH.*=.*Linux_.*|ARCH         = $ARCH|" \
+            -e "s|^MPdir.*=.*|MPdir        = $SLES_MPI_DIR|" \
+            -e "s|^MPinc.*=.*-I/usr/include/openmpi.*|MPinc        = -I$MPI_INC|" \
+            -e "s|^MPlib.*=.*\$(MPdir)/lib/.*|MPlib        = \$(MPdir)/lib64/libmpi.so|" \
+            -e "s|^LAdir.*=.*|LAdir        = $BLAS_DIR|" \
+            -e "s|^LAlib.*=.*|LAlib        = \$(LAdir)/lib/$BLAS_LIB|" \
+            "$TEMPLATE" > "$OUTPUT"
     else
-        # RHEL, Amazon Linux, SLES
+        # RHEL, Amazon Linux
         sed -e "s|^ARCH.*=.*Linux_.*|ARCH         = $ARCH|" \
             -e "s|^MPinc.*=.*-I/usr/include/openmpi.*|MPinc        = -I$MPI_INC|" \
             -e "s|^LAdir.*=.*|LAdir        = $BLAS_DIR|" \
@@ -120,8 +131,18 @@ else
             -e "s|^LAdir.*=.*|LAdir        = /usr/lib/aarch64-linux-gnu|" \
             -e "s|^LAlib.*=.*|LAlib        = \$(LAdir)/$BLAS_LIB|" \
             "$TEMPLATE" > "$OUTPUT"
+    elif [[ "$MPI_INC" == *"/mpi/gcc/openmpi"* ]]; then
+        # SLES uses /usr/lib64/mpi/gcc/openmpi* path with lib64 subdirectory
+        # Extract MPdir from MPI_INC by removing /include suffix
+        SLES_MPI_DIR="${MPI_INC%/include}"
+        sed -e "s|^ARCH.*=.*Linux_.*|ARCH         = $ARCH|" \
+            -e "s|^MPdir.*=.*|MPdir        = $SLES_MPI_DIR|" \
+            -e "s|^MPinc.*=.*-I/usr/include/openmpi.*|MPinc        = -I$MPI_INC|" \
+            -e "s|^MPlib.*=.*\$(MPdir)/lib/.*|MPlib        = \$(MPdir)/lib64/libmpi.so|" \
+            -e "s|^LAlib.*=.*|LAlib        = \$(LAdir)/$BLAS_LIB|" \
+            "$TEMPLATE" > "$OUTPUT"
     else
-        # RHEL, Amazon Linux, SLES use standard paths
+        # RHEL, Amazon Linux use standard paths
         sed -e "s|^ARCH.*=.*Linux_.*|ARCH         = $ARCH|" \
             -e "s|^MPinc.*=.*-I/usr/include/openmpi.*|MPinc        = -I$MPI_INC|" \
             -e "s|^LAlib.*=.*|LAlib        = \$(LAdir)/$BLAS_LIB|" \
