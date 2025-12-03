@@ -76,17 +76,57 @@ fi
 # Handle both .so (shared) and .a (static) libraries
 if [ -n "$BLAS_DIR" ]; then
     # For BLIS with custom directory
-    sed -e "s|^ARCH.*=.*Linux_.*|ARCH         = $ARCH|" \
-        -e "s|^MPinc.*=.*-I/usr/include/openmpi.*|MPinc        = -I$MPI_INC|" \
-        -e "s|^LAdir.*=.*|LAdir        = $BLAS_DIR|" \
-        -e "s|^LAlib.*=.*|LAlib        = \$(LAdir)/lib/$BLAS_LIB|" \
-        "$TEMPLATE" > "$OUTPUT"
+    # Check if Ubuntu for MPI path
+    if [[ "$MPI_INC" == *"x86_64-linux-gnu"* ]]; then
+        # Ubuntu x86_64
+        sed -e "s|^ARCH.*=.*Linux_.*|ARCH         = $ARCH|" \
+            -e "s|^MPdir.*=.*|MPdir        = /usr/lib/x86_64-linux-gnu/openmpi|" \
+            -e "s|^MPinc.*=.*-I/usr/include/openmpi.*|MPinc        = -I$MPI_INC|" \
+            -e "s|^LAdir.*=.*|LAdir        = $BLAS_DIR|" \
+            -e "s|^LAlib.*=.*|LAlib        = \$(LAdir)/lib/$BLAS_LIB|" \
+            "$TEMPLATE" > "$OUTPUT"
+    elif [[ "$MPI_INC" == *"aarch64-linux-gnu"* ]]; then
+        # Ubuntu aarch64
+        sed -e "s|^ARCH.*=.*Linux_.*|ARCH         = $ARCH|" \
+            -e "s|^MPdir.*=.*|MPdir        = /usr/lib/aarch64-linux-gnu/openmpi|" \
+            -e "s|^MPinc.*=.*-I/usr/include/openmpi.*|MPinc        = -I$MPI_INC|" \
+            -e "s|^LAdir.*=.*|LAdir        = $BLAS_DIR|" \
+            -e "s|^LAlib.*=.*|LAlib        = \$(LAdir)/lib/$BLAS_LIB|" \
+            "$TEMPLATE" > "$OUTPUT"
+    else
+        # RHEL, Amazon Linux, SLES
+        sed -e "s|^ARCH.*=.*Linux_.*|ARCH         = $ARCH|" \
+            -e "s|^MPinc.*=.*-I/usr/include/openmpi.*|MPinc        = -I$MPI_INC|" \
+            -e "s|^LAdir.*=.*|LAdir        = $BLAS_DIR|" \
+            -e "s|^LAlib.*=.*|LAlib        = \$(LAdir)/lib/$BLAS_LIB|" \
+            "$TEMPLATE" > "$OUTPUT"
+    fi
 else
     # For system libraries (OpenBLAS/FlexiBLAS)
-    sed -e "s|^ARCH.*=.*Linux_.*|ARCH         = $ARCH|" \
-        -e "s|^MPinc.*=.*-I/usr/include/openmpi.*|MPinc        = -I$MPI_INC|" \
-        -e "s|^LAlib.*=.*|LAlib        = \$(LAdir)/$BLAS_LIB|" \
-        "$TEMPLATE" > "$OUTPUT"
+    # Detect if Ubuntu - needs different library paths
+    if [[ "$MPI_INC" == *"x86_64-linux-gnu"* ]]; then
+        # Ubuntu x86_64 uses multiarch paths
+        sed -e "s|^ARCH.*=.*Linux_.*|ARCH         = $ARCH|" \
+            -e "s|^MPdir.*=.*|MPdir        = /usr/lib/x86_64-linux-gnu/openmpi|" \
+            -e "s|^MPinc.*=.*-I/usr/include/openmpi.*|MPinc        = -I$MPI_INC|" \
+            -e "s|^LAdir.*=.*|LAdir        = /usr/lib/x86_64-linux-gnu|" \
+            -e "s|^LAlib.*=.*|LAlib        = \$(LAdir)/$BLAS_LIB|" \
+            "$TEMPLATE" > "$OUTPUT"
+    elif [[ "$MPI_INC" == *"aarch64-linux-gnu"* ]]; then
+        # Ubuntu aarch64 uses multiarch paths
+        sed -e "s|^ARCH.*=.*Linux_.*|ARCH         = $ARCH|" \
+            -e "s|^MPdir.*=.*|MPdir        = /usr/lib/aarch64-linux-gnu/openmpi|" \
+            -e "s|^MPinc.*=.*-I/usr/include/openmpi.*|MPinc        = -I$MPI_INC|" \
+            -e "s|^LAdir.*=.*|LAdir        = /usr/lib/aarch64-linux-gnu|" \
+            -e "s|^LAlib.*=.*|LAlib        = \$(LAdir)/$BLAS_LIB|" \
+            "$TEMPLATE" > "$OUTPUT"
+    else
+        # RHEL, Amazon Linux, SLES use standard paths
+        sed -e "s|^ARCH.*=.*Linux_.*|ARCH         = $ARCH|" \
+            -e "s|^MPinc.*=.*-I/usr/include/openmpi.*|MPinc        = -I$MPI_INC|" \
+            -e "s|^LAlib.*=.*|LAlib        = \$(LAdir)/$BLAS_LIB|" \
+            "$TEMPLATE" > "$OUTPUT"
+    fi
 fi
 
 if [ $? -eq 0 ]; then

@@ -505,17 +505,34 @@ build_hpl()
 	cd hpl-$HPL_VER
 
 	# Determine architecture-specific MPI include path
-	case "$arch" in
-		x86_64)
-			mpi_inc="/usr/include/openmpi-x86_64"
-			;;
-		aarch64)
-			mpi_inc="/usr/include/openmpi-aarch64"
-			;;
-		*)
-			mpi_inc="/usr/include/openmpi"
-			;;
-	esac
+	os=$(get_os)
+	if [[ "$os" == "ubuntu" ]]; then
+		# Ubuntu uses multiarch lib path for MPI includes
+		case "$arch" in
+			x86_64)
+				mpi_inc="/usr/lib/x86_64-linux-gnu/openmpi/include"
+				;;
+			aarch64)
+				mpi_inc="/usr/lib/aarch64-linux-gnu/openmpi/include"
+				;;
+			*)
+				mpi_inc="/usr/include/openmpi"
+				;;
+		esac
+	else
+		# RHEL, Amazon Linux, SLES use include path
+		case "$arch" in
+			x86_64)
+				mpi_inc="/usr/include/openmpi-x86_64"
+				;;
+			aarch64)
+				mpi_inc="/usr/include/openmpi-aarch64"
+				;;
+			*)
+				mpi_inc="/usr/include/openmpi"
+				;;
+		esac
+	fi
 
 	# Choose base template makefile and set BLAS library name
 	if [[ "$blaslib" == *"MKL"* ]]; then
