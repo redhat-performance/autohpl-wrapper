@@ -195,7 +195,7 @@ get_mpi_path() {
             echo "/usr/lib64/openmpi"
             ;;
         amzn)
-            echo "/usr/lib64/openmpi/bin/"
+            echo "/usr/lib64/openmpi"
             ;;
         ubuntu)
             echo "/usr/"
