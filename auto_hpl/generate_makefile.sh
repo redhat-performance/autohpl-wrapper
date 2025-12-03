@@ -79,13 +79,13 @@ if [ -n "$BLAS_DIR" ]; then
     sed -e "s|^ARCH.*=.*Linux_.*|ARCH         = $ARCH|" \
         -e "s|^MPinc.*=.*-I/usr/include/openmpi.*|MPinc        = -I$MPI_INC|" \
         -e "s|^LAdir.*=.*|LAdir        = $BLAS_DIR|" \
-        -e "s|LAlib.*=.*\$(LAdir)/lib.*\.\(so\|a\).*|LAlib        = \$(LAdir)/lib/$BLAS_LIB|" \
+        -e "s|^LAlib.*=.*|LAlib        = \$(LAdir)/lib/$BLAS_LIB|" \
         "$TEMPLATE" > "$OUTPUT"
 else
     # For system libraries (OpenBLAS/FlexiBLAS)
     sed -e "s|^ARCH.*=.*Linux_.*|ARCH         = $ARCH|" \
         -e "s|^MPinc.*=.*-I/usr/include/openmpi.*|MPinc        = -I$MPI_INC|" \
-        -e "s|LAlib.*=.*\$(LAdir)/.*\.\(so\|a\).*|LAlib        = \$(LAdir)/$BLAS_LIB|" \
+        -e "s|^LAlib.*=.*|LAlib        = \$(LAdir)/$BLAS_LIB|" \
         "$TEMPLATE" > "$OUTPUT"
 fi
 
