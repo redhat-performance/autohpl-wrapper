@@ -517,34 +517,45 @@ build_hpl()
 			;;
 	esac
 
-	# Determine BLAS library name based on OS/version
-	os=$(get_os)
-	os_ver=$(get_os_version)
-	if [[ "$os" == "rhel" && ("$os_ver" == "9"* || "$os_ver" == "10"*) ]]; then
-		# RHEL 9/10 use FlexiBLAS with libopenblaso.so.0
-		blas_lib="libopenblaso.so.0"
-	else
-		# Default to libopenblas.so.0
-		blas_lib="libopenblas.so.0"
-	fi
-
-	# Choose base template makefile
+	# Choose base template makefile and set BLAS library name
 	if [[ "$blaslib" == *"MKL"* ]]; then
 		template_makefile="${run_dir}/Make.Linux_Intel_MKL"
+		# MKL uses its own library specification in the template
+		blas_lib=""
 	elif [[ "$blaslib" == *"BLIS"* ]]; then
 		template_makefile="${run_dir}/Make.Linux_AMD_BLIS"
+		# BLIS uses static library
+		blas_lib="libblis-mt.a"
 	else
 		# Use Intel OpenBLAS as base template for all OpenBLAS builds
 		template_makefile="${run_dir}/Make.Linux_Intel_openblas"
+		# Determine BLAS library name based on OS/version
+		os=$(get_os)
+		os_ver=$(get_os_version)
+		if [[ "$os" == "rhel" && ("$os_ver" == "9"* || "$os_ver" == "10"*) ]]; then
+			# RHEL 9/10 use FlexiBLAS with libopenblaso.so.0
+			blas_lib="libopenblaso.so.0"
+		else
+			# Default to libopenblas.so.0
+			blas_lib="libopenblas.so.0"
+		fi
+	fi
+
+	# Add BLAS directory for AMD BLIS builds
+	blas_dir_arg=""
+	if [[ "$blaslib" == "AMD_BLIS" ]]; then
+		blas_dir_arg="--blas-dir ${AMD_BLIS_DIR}"
 	fi
 
 	# Generate makefile on-the-fly using generate_makefile.sh
 	echo "Generating makefile for arch=${arch}, blaslib=${blaslib}, blas_lib=${blas_lib}"
+
 	${run_dir}/generate_makefile.sh \
 		--template "$template_makefile" \
 		--arch "Linux_${blaslib}" \
 		--blas-lib "$blas_lib" \
 		--mpi-inc "$mpi_inc" \
+		$blas_dir_arg \
 		--output "${run_dir}/Make.Linux_${blaslib}.generated"
 
 	if [ $? -ne 0 ]; then
