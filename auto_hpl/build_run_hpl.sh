@@ -156,16 +156,8 @@ size_platform()
 	if [[ "$arch" == "x86_64" ]]; then
 		BLAS_MT=1 #Set 1 to use Multi-thread BLAS, 0 for single thread
 
-		if [[ "$($TOOLS_BIN/detect_os)" == "sles" ]]; then
-			SLES_MPI_DIR=$(ls -d /usr/lib64/mpi/gcc/openmpi* 2>/dev/null | head -1)
-			MPI_PATH=${SLES_MPI_DIR}
-		elif [ $ubuntu -eq 0 ]; then
-			MPI_PATH=/usr/lib64/openmpi
-		elif [ $aws -eq 1 ]; then
-			MPI_PATH=/usr/lib64/openmpi/bin/
-		else
-			MPI_PATH=/usr/
-		fi
+		# Use centralized MPI path function
+		MPI_PATH=$(get_mpi_path)
 		family=$(grep "^CPU family" $LSCPU | cut -d: -f 2)
 		#
 		# Strip off the weird marketing names
@@ -187,16 +179,8 @@ size_platform()
 		fi
 	elif [[ "$arch" == "aarch64" ]]; then
 		BLAS_MT=1
-		if [[ "$($TOOLS_BIN/detect_os)" == "sles" ]]; then
-			SLES_MPI_DIR=$(ls -d /usr/lib64/mpi/gcc/openmpi* 2>/dev/null | head -1)
-			MPI_PATH=${SLES_MPI_DIR}
-		elif [ $ubuntu -eq 0 ]; then
-			MPI_PATH=/usr/lib64/openmpi
-		elif [ $aws -eq 1 ]; then
-			MPI_PATH=/usr/lib64/openmpi/bin/
-		else
-			MPI_PATH=/usr/
-		fi
+		# Use centralized MPI path function
+		MPI_PATH=$(get_mpi_path)
 	else
 		exit_out "Error: Architecture $arch is unsupported" 1
 	fi
@@ -431,61 +415,24 @@ check_mpi()
 				exit_out "Error: yum install openmpi openmpi-devel" 1
 			fi
 		fi
-		which mpirun > /dev/null 2>&1
-		# MPI module isn't loaded, go ahead and load it
-		if [ $? -ne 0 ]; then
-			# RHEL 10+ doesn't use environment modules for MPI
-			if [[ "$rhel_ver" == "10" ]] || [[ ! -f /etc/profile.d/modules.sh ]]; then
-				# Add MPI to PATH directly
-				if [ -d /usr/lib64/openmpi/bin ]; then
-					export PATH=/usr/lib64/openmpi/bin:$PATH
-					export LD_LIBRARY_PATH=/usr/lib64/openmpi/lib:$LD_LIBRARY_PATH
-				elif [ -d /usr/lib/openmpi/bin ]; then
-					export PATH=/usr/lib/openmpi/bin:$PATH
-					export LD_LIBRARY_PATH=/usr/lib/openmpi/lib:$LD_LIBRARY_PATH
-				fi
-			else
-				# RHEL 8/9 use environment modules
-				source /etc/profile.d/modules.sh
-				module load mpi/openmpi-${arch}
-				if [ $? -ne 0 ]; then
-					exit_out "module load mpi/openmpi-${arch} failed, exiting" 1
-				fi
-			fi
-			which mpirun > /dev/null 2>&1
-			if [ $? -ne 0 ]; then
-				exit_out "Error: mpirun not in path. exiting" 1
-			fi
-		fi
 	fi
 	if [ $ubuntu -eq 1 ]; then
 		apt-get --yes install openmpi-bin openmpi-common
 		if [ $? -ne 0 ]; then
 			exit_out "apt-get openmpi-bin openmpi-common failed." 1
 		fi
-		#
-		# Above loaded openmpi*
-		which mpirun > /dev/null 2>&1
-		if [[ $? != 0 ]]; then
-			exit_out "could not find mpirun" 1
-		fi
 	fi
 
-	# SLES: MPI is installed in /usr/lib64/mpi/gcc/openmpi*/ and needs PATH setup
-	if [[ "$($TOOLS_BIN/detect_os)" == "sles" ]]; then
-		which mpirun > /dev/null 2>&1
-		if [ $? -ne 0 ]; then
-			# Find openmpi directory (could be openmpi4, openmpi5, etc.)
-			SLES_MPI_DIR=$(ls -d /usr/lib64/mpi/gcc/openmpi* 2>/dev/null | head -1)
-			if [ -n "$SLES_MPI_DIR" ]; then
-				export PATH=$SLES_MPI_DIR/bin:$PATH
-				export LD_LIBRARY_PATH=$SLES_MPI_DIR/lib64:$LD_LIBRARY_PATH
-			fi
-			which mpirun > /dev/null 2>&1
-			if [ $? -ne 0 ]; then
-				exit_out "Error: mpirun not found in PATH after SLES MPI setup" 1
-			fi
-		fi
+	# Use centralized MPI environment setup
+	setup_mpi_environment "$arch"
+	if [ $? -ne 0 ]; then
+		exit_out "Error: MPI environment setup failed" 1
+	fi
+
+	# Verify mpirun is available
+	which mpirun > /dev/null 2>&1
+	if [ $? -ne 0 ]; then
+		exit_out "Error: mpirun not in path after setup" 1
 	fi
 }
 
@@ -557,28 +504,56 @@ build_hpl()
 	fi
 	cd hpl-$HPL_VER
 
-	makefile=Make.Linux_${blaslib}
-	if [ $ubuntu -eq 1 ]; then
-		makefile=Make.Linux_${blaslib}_ubuntu
+	# Determine architecture-specific MPI include path
+	case "$arch" in
+		x86_64)
+			mpi_inc="/usr/include/openmpi-x86_64"
+			;;
+		aarch64)
+			mpi_inc="/usr/include/openmpi-aarch64"
+			;;
+		*)
+			mpi_inc="/usr/include/openmpi"
+			;;
+	esac
+
+	# Determine BLAS library name based on OS/version
+	os=$(get_os)
+	os_ver=$(get_os_version)
+	if [[ "$os" == "rhel" && ("$os_ver" == "9"* || "$os_ver" == "10"*) ]]; then
+		# RHEL 9/10 use FlexiBLAS with libopenblaso.so.0
+		blas_lib="libopenblaso.so.0"
+	else
+		# Default to libopenblas.so.0
+		blas_lib="libopenblas.so.0"
 	fi
-	if [ $aws -eq 1 ]; then
-		makefile=Make.Linux_${blaslib}_aws
+
+	# Choose base template makefile
+	if [[ "$blaslib" == *"MKL"* ]]; then
+		template_makefile="${run_dir}/Make.Linux_Intel_MKL"
+	elif [[ "$blaslib" == *"BLIS"* ]]; then
+		template_makefile="${run_dir}/Make.Linux_AMD_BLIS"
+	else
+		# Use Intel OpenBLAS as base template for all OpenBLAS builds
+		template_makefile="${run_dir}/Make.Linux_Intel_openblas"
 	fi
-	if [[ "$($TOOLS_BIN/detect_os)" == "sles" ]]; then
-		makefile=Make.Linux_${blaslib}_sles
+
+	# Generate makefile on-the-fly using generate_makefile.sh
+	echo "Generating makefile for arch=${arch}, blaslib=${blaslib}, blas_lib=${blas_lib}"
+	${run_dir}/generate_makefile.sh \
+		--template "$template_makefile" \
+		--arch "Linux_${blaslib}" \
+		--blas-lib "$blas_lib" \
+		--mpi-inc "$mpi_inc" \
+		--output "${run_dir}/Make.Linux_${blaslib}.generated"
+
+	if [ $? -ne 0 ]; then
+		exit_out "Error: generate_makefile.sh failed" 1
 	fi
-	# RHEL 9/10: Use RHEL-specific makefile for Intel (FlexiBLAS uses libopenblaso.so.0)
-	# AMD and ARM already have correct library name in default makefiles
-	if [[ "$($TOOLS_BIN/detect_os)" == "rhel" ]]; then
-		rhel_ver=$($TOOLS_BIN/detect_os --os-version)
-		if [[ "$rhel_ver" == "9"* && "$blaslib" == "Intel_openblas" ]]; then
-			makefile=Make.Linux_${blaslib}_rhel9
-		elif [[ "$rhel_ver" == "10"* ]]; then
-			makefile=Make.Linux_${blaslib}_rhel10
-		fi
-	fi
-	echo "sed s,TOPDIR,$run_dir, ${run_dir}/${makefile} > Make.Linux_${blaslib}"
-	sed s,TOPDIR,$run_dir, ${run_dir}/${makefile} > Make.Linux_${blaslib}
+
+	# Use generated makefile with TOPDIR substitution
+	echo "sed s,TOPDIR,$run_dir, ${run_dir}/Make.Linux_${blaslib}.generated > Make.Linux_${blaslib}"
+	sed s,TOPDIR,$run_dir, ${run_dir}/Make.Linux_${blaslib}.generated > Make.Linux_${blaslib}
 	bindir=Linux_${blaslib}
 	make arch=Linux_${blaslib} 2>&1 > ${RESULTSDIR}/hpl_make.out
 	if [ $? -ne 0 ]; then
@@ -595,15 +570,8 @@ clean_env()
 
 run_hpl()
 {
-	# RHEL 10: Set LD_LIBRARY_PATH for MPI runtime (works for both ARM and x86_64)
-	if [[ "$($TOOLS_BIN/detect_os)" == "rhel" ]]; then
-		rhel_ver=$($TOOLS_BIN/detect_os --os-version)
-		if [[ "$rhel_ver" == "10"* ]]; then
-			if [ -d /usr/lib64/openmpi/lib ]; then
-				export LD_LIBRARY_PATH=/usr/lib64/openmpi/lib:$LD_LIBRARY_PATH
-			fi
-		fi
-	fi
+	# Use centralized MPI runtime library path setup
+	set_mpi_runtime_library_path
 
 	cd $HPL_PATH/hpl-$HPL_VER/bin/${bindir}
 
@@ -675,73 +643,24 @@ install_run_hpl()
 	fi
 
 	if [[ $blaslib == *"openblas" ]]; then
-		# Amazon Linux 2 compiles OpenBLAS from source (see lines 713-726)
-		# so skip package installation for AL2
-		if [[ "$($TOOLS_BIN/detect_os)" == "amzn" && "$($TOOLS_BIN/detect_os --os-version)" == "2" ]]; then
+		# Check if we should compile OpenBLAS from source (Amazon Linux 2)
+		if should_compile_openblas_from_source; then
 			echo "Amazon Linux 2: Using OpenBLAS compiled from source"
 		else
 			echo "Installing OpenBLAS packages..."
 			$TOOLS_BIN/package_tool --wrapper_config ${run_dir}/openblas_packages.json --no_packages $to_no_pkg_install
 		fi
 
-		# SLES: Set up MPI PATH (MPI installed but not in PATH by default)
-		if [[ "$($TOOLS_BIN/detect_os)" == "sles" ]]; then
-			which mpirun > /dev/null 2>&1
-			if [ $? -ne 0 ]; then
-				SLES_MPI_DIR=$(ls -d /usr/lib64/mpi/gcc/openmpi* 2>/dev/null | head -1)
-				if [ -n "$SLES_MPI_DIR" ]; then
-					export PATH=$SLES_MPI_DIR/bin:$PATH
-					export LD_LIBRARY_PATH=$SLES_MPI_DIR/lib64:$LD_LIBRARY_PATH
-					export CPATH=$SLES_MPI_DIR/include:$CPATH
-				fi
-				which mpirun > /dev/null 2>&1
-				if [ $? -ne 0 ]; then
-					exit_out "Error: mpirun not found in PATH after SLES MPI setup" 1
-				fi
-			fi
+		# Use centralized MPI environment setup (includes CPATH for compilation)
+		setup_mpi_environment "$arch" true
+		if [ $? -ne 0 ]; then
+			exit_out "Error: MPI environment setup failed" 1
 		fi
 
-		# RHEL 8/9 and AL2023: Load MPI module (uses environment modules)
-		if [[ "$($TOOLS_BIN/detect_os)" == "rhel" || "$($TOOLS_BIN/detect_os)" == "amzn" ]]; then
-			os_ver=$($TOOLS_BIN/detect_os --os-version)
-			# RHEL 8/9 or AL2023 use environment modules for MPI
-			if [[ "$os_ver" == "8"* || "$os_ver" == "9"* || "$os_ver" == "2023"* ]]; then
-				which mpirun > /dev/null 2>&1
-				if [ $? -ne 0 ]; then
-					if [[ -f /etc/profile.d/modules.sh ]]; then
-						source /etc/profile.d/modules.sh
-						module load mpi/openmpi-${arch}
-						if [ $? -ne 0 ]; then
-							exit_out "module load mpi/openmpi-${arch} failed, exiting" 1
-						fi
-					fi
-					which mpirun > /dev/null 2>&1
-					if [ $? -ne 0 ]; then
-						exit_out "Error: mpirun not in path after loading modules" 1
-					fi
-				fi
-			fi
-		fi
-
-		# RHEL 10+: Set up MPI PATH (RHEL 10 doesn't use environment modules)
-		if [[ "$($TOOLS_BIN/detect_os)" == "rhel" ]]; then
-			rhel_ver=$($TOOLS_BIN/detect_os --os-version)
-			if [[ "$rhel_ver" == "10"* ]]; then
-				which mpirun > /dev/null 2>&1
-				if [ $? -ne 0 ]; then
-					if [ -d /usr/lib64/openmpi/bin ]; then
-						export PATH=/usr/lib64/openmpi/bin:$PATH
-						export LD_LIBRARY_PATH=/usr/lib64/openmpi/lib:$LD_LIBRARY_PATH
-					elif [ -d /usr/lib/openmpi/bin ]; then
-						export PATH=/usr/lib/openmpi/bin:$PATH
-						export LD_LIBRARY_PATH=/usr/lib/openmpi/lib:$LD_LIBRARY_PATH
-					fi
-					which mpirun > /dev/null 2>&1
-					if [ $? -ne 0 ]; then
-						exit_out "Error: mpirun not found in PATH after RHEL 10 MPI setup" 1
-					fi
-				fi
-			fi
+		# Verify mpirun is available
+		which mpirun > /dev/null 2>&1
+		if [ $? -ne 0 ]; then
+			exit_out "Error: mpirun not in path after MPI setup" 1
 		fi
 	fi
 
@@ -757,6 +676,9 @@ regression=0
 # We are still operating at the level test tools was installed at.
 #
 source test_tools/general_setup "$@"
+
+# Import MPI setup library for centralized MPI configuration
+source ${run_dir}/mpi_setup_lib.sh
 
 ARGUMENT_LIST=(
 	"mem_size"
