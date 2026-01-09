@@ -573,16 +573,29 @@ run_hpl()
 	echo "     T/V           N    NB     P     Q               Time                 Gflops"  >> $outfile
 	for i in $(seq "$NUM_ITER")
 	do
+		#
+		# start PCP subset
+		#
+		if [[ $to_use_pcp -eq 1 ]]; then
+			start_pcp_subset
+			result2pcp iteration $i 
+		fi
 		$MPI_PATH/bin/mpirun --allow-run-as-root -np $num_mpi --mca btl self,vader --report-bindings $bind_settings ./xhpl 2>&1 > hpl.out
 		cat hpl.out | grep -E "WC|WR"  >> $outfile
-	if [[ $to_use_pcp -eq 1 ]]; then
-		hpl_result_line=$(grep -E "WC|WR" hpl.out)
-		if [[ -n "$hpl_result_line" ]]; then
-			read time_val gflops_val <<< $(echo "$hpl_result_line" | awk '{print $(NF-1), $NF}')
- 			result2pcp hpl_time "$time_val"
- 			result2pcp hpl_gflops "$gflops_val"
+		if [[ $to_use_pcp -eq 1 ]]; then
+			hpl_result_line=$(grep -E "WC|WR" hpl.out)
+			if [[ -n "$hpl_result_line" ]]; then
+				read time_val gflops_val <<< $(echo "$hpl_result_line" | awk '{print $(NF-1), $NF}')
+				result2pcp hpl_time "$time_val"
+				result2pcp hpl_gflops "$gflops_val"
+			fi
 		fi
-	fi
+		#
+		# stop PCP subset
+		#
+		if [[ $to_use_pcp -eq 1 ]]; then
+			stop_pcp_subset
+		fi
 	done
 	cp $outfile $SCRIPT_DIR
 	cd $SCRIPT_DIR
@@ -737,21 +750,19 @@ ${curdir}/test_tools/gather_data ${curdir}
 #Setup and start PCP if --use_pcp is passed
 # using pdir 
 pdir=""
-if [[ $to_use_pcp -eq 1 ]]; then
-    source $TOOLS_BIN/pcp/pcp_commands.inc
-    setup_pcp
-    pcp_cfg=$TOOLS_BIN/pcp/default.cfg
-    pcpdir=/tmp/pcp_`date "+%Y.%m.%d-%H.%M.%S"`
-    pdir="--copy_dir $pcpdir"
-    echo "Start PCP"
-    start_pcp ${pcpdir}/ ${test_name} $pcp_cfg
-fi
 
 range=`seq 1 1 $to_times_to_run`
 for iteration in $range; do
-	#start PCP subset for iterations
 	if [[ $to_use_pcp -eq 1 ]]; then
-       	    start_pcp_subset
+		source $TOOLS_BIN/pcp/pcp_commands.inc
+		setup_pcp
+		pcp_cfg=$TOOLS_BIN/pcp/default.cfg
+		if [[ $pdir == "" ]]; then
+			pcpdir=/tmp/pcp_`date "+%Y.%m.%d-%H.%M.%S"`
+			pdir="--copy_dir $pcpdir"
+		fi
+		echo "Start PCP"
+		start_pcp ${pcpdir}/ ${test_name}_${iteration} $pcp_cfg
 	fi
 	install_run_hpl
 	pushd /tmp/results_auto_hpl_${to_tuned_setting} > /dev/null
@@ -768,22 +779,16 @@ for iteration in $range; do
 		$TOOLS_BIN/test_header_info --test_name ${test_name} --meta_output "$meta" --results_file $out_file
   		tail -n +2  $results | tr -s ' ' | sed "s/^ //g" | sed "s/ /:/g" >> $out_file
 	done
-	# stop PCP subset for iterations
-	if [[ $to_use_pcp -eq 1 ]]; then
-      	    echo "Send result to PCP archive for iteration $iteration"
-            stop_pcp_subset
-	fi
 	if [ $sleep_for -ne 0 ];then
 		if [ $iteration -ne $to_times_to_run ]; then
 			sleep $sleep_for
 		fi
 	fi
+	if [[ $to_use_pcp -eq 1 ]]; then
+		stop_pcp
+		shutdown_pcp
+	fi
 done
-if [[ $to_use_pcp -eq 1 ]]; then
-	echo "Stop PCP"
-	stop_pcp
-	shutdown_pcp
-fi
 cp $out_file results_auto_hpl.csv
 $TOOLS_BIN/validate_line --results_file results_auto_hpl.csv --base_results_file $run_dir/base_test_results/test1/verify
 rtc=$?
