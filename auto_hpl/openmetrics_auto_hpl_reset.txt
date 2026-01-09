@@ -1,0 +1,9 @@
+iteration 0
+running 0
+numthreads 0
+runtime NaN
+throughput NaN
+latency NaN
+hpl_time NaN
+hpl_gflops NaN
+
