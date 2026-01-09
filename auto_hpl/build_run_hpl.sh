@@ -578,12 +578,12 @@ run_hpl()
 		#
 		if [[ $to_use_pcp -eq 1 ]]; then
 			start_pcp_subset
-			result2pcp iteration $i 
+			result2pcp iteration $i
 		fi
-		$MPI_PATH/bin/mpirun --allow-run-as-root -np $num_mpi --mca btl self,vader --report-bindings $bind_settings ./xhpl 2>&1 > hpl.out
-		cat hpl.out | grep -E "WC|WR"  >> $outfile
+		$MPI_PATH/bin/mpirun --allow-run-as-root -np $num_mpi --mca btl self,vader --report-bindings $bind_settings ./xhpl 2>&1 > auto_hpl.out
+		cat auto_hpl.out | grep -E "WC|WR"  >> $outfile
 		if [[ $to_use_pcp -eq 1 ]]; then
-			hpl_result_line=$(grep -E "WC|WR" hpl.out)
+			hpl_result_line=$(grep -E "WC|WR" auto_hpl.out)
 			if [[ -n "$hpl_result_line" ]]; then
 				read time_val gflops_val <<< $(echo "$hpl_result_line" | awk '{print $(NF-1), $NF}')
 				result2pcp hpl_time "$time_val"
@@ -598,6 +598,7 @@ run_hpl()
 		fi
 	done
 	cp $outfile $SCRIPT_DIR
+	cp auto_hpl.out $SCRIPT_DIR
 	cd $SCRIPT_DIR
 }
 
@@ -792,5 +793,5 @@ done
 cp $out_file results_auto_hpl.csv
 $TOOLS_BIN/validate_line --results_file results_auto_hpl.csv --base_results_file $run_dir/base_test_results/test1/verify
 rtc=$?
-$TOOLS_BIN/save_results --curdir $curdir --home_root $to_home_root --other_files "${curdir}/auto_hpl.out,*csv,test_results_report" --results $out_file  --test_name $test_name --tuned_setting=$to_tuned_setting --version NONE --user $to_user $pdir
+$TOOLS_BIN/save_results --curdir $curdir --home_root $to_home_root --other_files "${SCRIPT_DIR}/auto_hpl.out,*csv,test_results_report" --results $out_file  --test_name $test_name --tuned_setting=$to_tuned_setting --version NONE --user $to_user $pdir
 exit $rtc
