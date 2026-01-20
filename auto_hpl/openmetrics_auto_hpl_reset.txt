@@ -6,4 +6,3 @@ throughput NaN
 latency NaN
 hpl_time NaN
 hpl_gflops NaN
-

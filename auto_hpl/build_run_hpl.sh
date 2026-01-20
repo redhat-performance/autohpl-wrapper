@@ -578,7 +578,7 @@ run_hpl()
 		#
 		if [[ $to_use_pcp -eq 1 ]]; then
 			start_pcp_subset
-			result2pcp iteration $i
+			results2pcp_multiple "iteration:$i"
 		fi
 		$MPI_PATH/bin/mpirun --allow-run-as-root -np $num_mpi --mca btl self,vader --report-bindings $bind_settings ./xhpl 2>&1 > auto_hpl.out
 		cat auto_hpl.out | grep -E "WC|WR"  >> $outfile
@@ -586,8 +586,8 @@ run_hpl()
 			hpl_result_line=$(grep -E "WC|WR" auto_hpl.out)
 			if [[ -n "$hpl_result_line" ]]; then
 				read time_val gflops_val <<< $(echo "$hpl_result_line" | awk '{print $(NF-1), $NF}')
-				result2pcp hpl_time "$time_val"
-				result2pcp hpl_gflops "$gflops_val"
+				results2pcp_multiple "hpl_time:$time_val,hpl_gflops:$gflops_val"
+				reset_pcp_om
 			fi
 		fi
 		#
