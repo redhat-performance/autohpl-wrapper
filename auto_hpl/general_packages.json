@@ -1,0 +1,57 @@
+{
+  "dependencies": {
+    "rhel": [
+      "gcc",
+      "make",
+      "gcc-gfortran",
+      "wget",
+      "bc",
+      "perf",
+      "git",
+      "zip",
+      "unzip",
+      "numactl",
+      "dmidecode"
+    ],
+    "amzn": [
+      "gcc",
+      "make",
+      "gcc-gfortran",
+      "wget",
+      "bc",
+      "perf",
+      "git",
+      "zip",
+      "unzip",
+      "numactl",
+      "dmidecode",
+      "openmpi",
+      "openmpi-devel"
+    ],
+    "ubuntu": [
+      "gcc",
+      "make",
+      "gfortran",
+      "wget",
+      "bc",
+      "linux-tools-common",
+      "linux-tools-generic",
+      "git",
+      "zip",
+      "unzip",
+      "numactl"
+    ],
+    "sles": [
+      "gcc",
+      "make",
+      "gcc-fortran",
+      "wget",
+      "bc",
+      "perf",
+      "git",
+      "zip",
+      "unzip",
+      "numactl"
+    ]
+  }
+}

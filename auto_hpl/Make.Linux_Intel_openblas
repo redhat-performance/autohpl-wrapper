@@ -93,8 +93,8 @@ MPlib        = $(MPdir)/lib/libmpi.so
 # used. The variable LAdir is only used for defining LAinc and LAlib.
 #
 LAdir        = /usr/lib64
-LAinc        = 
-LAlib        = $(LAdir)/libopenblaso.so.0
+LAinc        =
+LAlib        = $(LAdir)/libopenblas.so.0
 #
 # ----------------------------------------------------------------------
 # - F77 / C interface --------------------------------------------------

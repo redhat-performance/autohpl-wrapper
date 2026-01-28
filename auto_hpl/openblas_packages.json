@@ -1,0 +1,28 @@
+{
+  "dependencies": {
+    "rhel": [
+      "flexiblas",
+      "flexiblas-devel",
+      "flexiblas-openblas-openmp",
+      "openmpi",
+      "openmpi-devel"
+    ],
+    "amzn": [
+      "openblas-devel",
+      "openmpi",
+      "openmpi-devel"
+    ],
+    "ubuntu": [
+      "libopenblas-dev",
+      "libopenblas-openmp-dev",
+      "openmpi-bin",
+      "openmpi-common",
+      "libopenmpi-dev"
+    ],
+    "sles": [
+      "openblas-devel",
+      "openmpi",
+      "openmpi-devel"
+    ]
+  }
+}

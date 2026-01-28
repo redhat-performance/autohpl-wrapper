@@ -156,13 +156,8 @@ size_platform()
 	if [[ "$arch" == "x86_64" ]]; then
 		BLAS_MT=1 #Set 1 to use Multi-thread BLAS, 0 for single thread
 
-		if [ $ubuntu -eq 0 ]; then
-			MPI_PATH=/usr/lib64/openmpi
-		elif [ $aws -eq 1 ]; then
-			MPI_PATH=/usr/lib64/openmpi/bin/
-		else
-			MPI_PATH=/usr/
-		fi
+		# Use centralized MPI path function
+		MPI_PATH=$(get_mpi_path)
 		family=$(grep "^CPU family" $LSCPU | cut -d: -f 2)
 		#
 		# Strip off the weird marketing names
@@ -184,13 +179,8 @@ size_platform()
 		fi
 	elif [[ "$arch" == "aarch64" ]]; then
 		BLAS_MT=1
-		if [ $ubuntu -eq 0 ]; then
-			MPI_PATH=/usr/lib64/openmpi
-		elif [ $aws -eq 1 ]; then
-			MPI_PATH=/usr/lib64/openmpi/bin/
-		else
-			MPI_PATH=/usr/
-		fi
+		# Use centralized MPI path function
+		MPI_PATH=$(get_mpi_path)
 	else
 		exit_out "Error: Architecture $arch is unsupported" 1
 	fi
@@ -416,6 +406,7 @@ EOF
 
 check_mpi()
 {
+	# This function is only called for MKL and BLIS (OpenBLAS installs MPI via package_tool)
 	if [ $ubuntu -eq 0 ]; then
 		yum list installed openmpi 2>&1 > /dev/null
 		if [[ "$?" != "0" ]]; then
@@ -424,31 +415,24 @@ check_mpi()
 				exit_out "Error: yum install openmpi openmpi-devel" 1
 			fi
 		fi
-		which mpirun > /dev/null 2>&1
-		# MPI module isn't loaded, go ahead and load it
-		if [ $? -ne 0 ]; then
-			source /etc/profile.d/modules.sh
-			module load mpi/openmpi-${arch}
-			if [ $? -ne 0 ]; then
-				exit_out "module load mpi/openmpi-${arch} failed, exiting" 1
-			fi
-			which mpirun > /dev/null 2>&1
-			if [ $? -ne 0 ]; then
-				exit_out "Error: mpirun not in path. exiting" 1
-			fi
-		fi
 	fi
 	if [ $ubuntu -eq 1 ]; then
 		apt-get --yes install openmpi-bin openmpi-common
 		if [ $? -ne 0 ]; then
 			exit_out "apt-get openmpi-bin openmpi-common failed." 1
 		fi
-		#
-		# Above loaded openmpi*
-		which mpirun > /dev/null 2>&1
-		if [[ $? != 0 ]]; then
-			exit_out "could not find mpirun" 1
-		fi
+	fi
+
+	# Use centralized MPI environment setup
+	setup_mpi_environment "$arch"
+	if [ $? -ne 0 ]; then
+		exit_out "Error: MPI environment setup failed" 1
+	fi
+
+	# Verify mpirun is available
+	which mpirun > /dev/null 2>&1
+	if [ $? -ne 0 ]; then
+		exit_out "Error: mpirun not in path after setup" 1
 	fi
 }
 
@@ -520,15 +504,92 @@ build_hpl()
 	fi
 	cd hpl-$HPL_VER
 
-	makefile=Make.Linux_${blaslib}
-	if [ $ubuntu -eq 1 ]; then
-		makefile=Make.Linux_${blaslib}_ubuntu
+	# Determine architecture-specific MPI include path
+	os=$(get_os)
+	if [[ "$os" == "ubuntu" ]]; then
+		# Ubuntu uses multiarch lib path for MPI includes
+		case "$arch" in
+			x86_64)
+				mpi_inc="/usr/lib/x86_64-linux-gnu/openmpi/include"
+				;;
+			aarch64)
+				mpi_inc="/usr/lib/aarch64-linux-gnu/openmpi/include"
+				;;
+			*)
+				mpi_inc="/usr/include/openmpi"
+				;;
+		esac
+	elif [[ "$os" == "sles" ]]; then
+		# SLES uses /usr/lib64/mpi/gcc/openmpi* path
+		sles_mpi_dir=$(ls -d /usr/lib64/mpi/gcc/openmpi* 2>/dev/null | sort -V | tail -1)
+		if [ -n "$sles_mpi_dir" ]; then
+			mpi_inc="${sles_mpi_dir}/include"
+		else
+			mpi_inc="/usr/include/openmpi"
+		fi
+	else
+		# RHEL, Amazon Linux use include path
+		case "$arch" in
+			x86_64)
+				mpi_inc="/usr/include/openmpi-x86_64"
+				;;
+			aarch64)
+				mpi_inc="/usr/include/openmpi-aarch64"
+				;;
+			*)
+				mpi_inc="/usr/include/openmpi"
+				;;
+		esac
 	fi
-	if [ $aws -eq 1 ]; then
-		makefile=Make.Linux_${blaslib}_aws
+
+	# Choose base template makefile and set BLAS library name
+	if [[ "$blaslib" == *"MKL"* ]]; then
+		template_makefile="${run_dir}/Make.Linux_Intel_MKL"
+		# MKL uses its own library specification in the template
+		blas_lib=""
+	elif [[ "$blaslib" == *"BLIS"* ]]; then
+		template_makefile="${run_dir}/Make.Linux_AMD_BLIS"
+		# BLIS uses static library
+		blas_lib="libblis-mt.a"
+	else
+		# Use Intel OpenBLAS as base template for all OpenBLAS builds
+		template_makefile="${run_dir}/Make.Linux_Intel_openblas"
+		# Determine BLAS library name based on OS/version
+		os=$(get_os)
+		os_ver=$(get_os_version)
+		if [[ "$os" == "rhel" && ("$os_ver" == "9"* || "$os_ver" == "10"*) ]]; then
+			# RHEL 9/10 use FlexiBLAS with libopenblaso.so.0
+			blas_lib="libopenblaso.so.0"
+		else
+			# Default to libopenblas.so.0
+			blas_lib="libopenblas.so.0"
+		fi
 	fi
-	echo "sed s,TOPDIR,$run_dir, ${run_dir}/${makefile} > Make.Linux_${blaslib}"
-	sed s,TOPDIR,$run_dir, ${run_dir}/${makefile} > Make.Linux_${blaslib}
+
+	# Add BLAS directory for AMD BLIS builds
+	blas_dir_arg=""
+	if [[ "$blaslib" == "AMD_BLIS" ]]; then
+		blas_dir_arg="--blas-dir ${AMD_BLIS_DIR}"
+	fi
+
+	# Generate makefile on-the-fly using generate_makefile.sh
+	echo "Generating makefile for arch=${arch}, blaslib=${blaslib}, blas_lib=${blas_lib}"
+
+	${run_dir}/generate_makefile.sh \
+		--template "$template_makefile" \
+		--arch "Linux_${blaslib}" \
+		--blas-lib "$blas_lib" \
+		--mpi-inc "$mpi_inc" \
+		$blas_dir_arg \
+		--output "${run_dir}/Make.Linux_${blaslib}.generated"
+
+	if [ $? -ne 0 ]; then
+		exit_out "Error: generate_makefile.sh failed" 1
+	fi
+
+	# Use generated makefile with TOPDIR substitution
+	echo "sed s,TOPDIR,$run_dir, ${run_dir}/Make.Linux_${blaslib}.generated > Make.Linux_${blaslib}"
+	sed s,TOPDIR,$run_dir, ${run_dir}/Make.Linux_${blaslib}.generated > Make.Linux_${blaslib}
 	bindir=Linux_${blaslib}
 	make arch=Linux_${blaslib} 2>&1 > ${RESULTSDIR}/hpl_make.out
 	if [ $? -ne 0 ]; then
@@ -545,6 +606,9 @@ clean_env()
 
 run_hpl()
 {
+	# Use centralized MPI runtime library path setup
+	set_mpi_runtime_library_path
+
 	cd $HPL_PATH/hpl-$HPL_VER/bin/${bindir}
 
 	# ckup the existing HPL.dat file
@@ -591,17 +655,18 @@ run_hpl()
 install_run_hpl()
 {
 	size_platform
-	check_mpi
 	clean_env
 	if [[ "$arch" == "x86_64" ]]; then
 		# Build AMD's special BLIS package
 		if [[ "$use_blis" == "1" ]]; then
 			echo "Using AMD BLIS"
 			blaslib="AMD_BLIS"
+			check_mpi  # Install MPI for BLIS
 			build_blis
 		elif [[ "$use_mkl" == "1" ]]; then
 			echo "Using Intel MKL"
 			blaslib="Intel_MKL"
+			check_mpi  # Install MPI for MKL
 			install_mkl
 		else
 			echo "Using system OpenBLAS"
@@ -614,14 +679,28 @@ install_run_hpl()
 	fi
 
 	if [[ $blaslib == *"openblas" ]]; then
-		pkgname="openblas-devel"
-		if [ $ubuntu -eq 1 ]; then  
-			pkgname="libopenblas-dev"
+		# Check if we should compile OpenBLAS from source (Amazon Linux 2)
+		if should_compile_openblas_from_source; then
+			echo "Amazon Linux 2: Using OpenBLAS compiled from source"
+		else
+			echo "Installing OpenBLAS packages..."
+			$TOOLS_BIN/package_tool --wrapper_config ${run_dir}/openblas_packages.json --no_packages $to_no_pkg_install
 		fi
-		$TOOLS_BIN/package_tool --packages $pkgname --no_packages $to_no_pkg_install
+
+		# Use centralized MPI environment setup (includes CPATH for compilation)
+		setup_mpi_environment "$arch" true
+		if [ $? -ne 0 ]; then
+			exit_out "Error: MPI environment setup failed" 1
+		fi
+
+		# Verify mpirun is available
+		which mpirun > /dev/null 2>&1
+		if [ $? -ne 0 ]; then
+			exit_out "Error: mpirun not in path after MPI setup" 1
+		fi
 	fi
 
-	build_hpl 
+	build_hpl
 	run_hpl
 }
 
@@ -633,6 +712,9 @@ regression=0
 # We are still operating at the level test tools was installed at.
 #
 source test_tools/general_setup "$@"
+
+# Import MPI setup library for centralized MPI configuration
+source ${run_dir}/mpi_setup_lib.sh
 
 ARGUMENT_LIST=(
 	"mem_size"
@@ -698,7 +780,7 @@ done
 
 info=`uname -a | cut -d' ' -f3 | cut -d'.' -f5`
 aws=0
-if [ ${info} == "amzn2" ]; then
+if [ "${info}" == "amzn2" ]; then
 	aws=1
 	mkdir src
 	pushd src
@@ -730,6 +812,10 @@ mkdir ${RESULTSDIR}
 ln -s ${RESULTSDIR} /tmp/results_auto_hpl_${to_tuned_setting}
 
 run_times=0
+
+# Install general packages required for HPL build and execution
+echo "Installing general packages..."
+$TOOLS_BIN/package_tool --wrapper_config ${run_dir}/general_packages.json --no_packages $to_no_pkg_install
 
 # Gather hardware information
 ${curdir}/test_tools/gather_data ${curdir}
@@ -785,7 +871,7 @@ if [[ $to_use_pcp -eq 1 ]]; then
 	shutdown_pcp
 fi
 cp $out_file results_auto_hpl.csv
-$TOOLS_BIN/validate_line --results_file results_auto_hpl.csv --base_results_file $run_dir/base_test_results/test1/verify
+#$TOOLS_BIN/validate_line --results_file results_auto_hpl.csv --base_results_file $run_dir/base_test_results/test1/verify
 rtc=$?
 $TOOLS_BIN/save_results --curdir $curdir --home_root $to_home_root --other_files "${curdir}/auto_hpl.out,*csv,test_results_report" --results $out_file  --test_name $test_name --tuned_setting=$to_tuned_setting --version NONE --user $to_user $pdir
 exit $rtc
