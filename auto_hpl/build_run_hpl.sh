@@ -644,7 +644,7 @@ run_hpl()
 			hpl_result_line=$(grep -E "WC|WR" hpl.out)
 			if [[ -n "$hpl_result_line" ]]; then
 				read time_val gflops_val <<< $(echo "$hpl_result_line" | awk '{print $(NF-1), $NF}')
-				results2pcp_multiple "hpl_time:${time_val},hpl_gflops:${gflops_val}"
+				results2pcp_multiple "iteration:${i},numthread:${NOMP},hpl_time:${time_val},hpl_gflops:${gflops_val}"
 				reset_pcp_om
 			fi
 		fi
