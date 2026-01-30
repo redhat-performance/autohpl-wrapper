@@ -635,19 +635,21 @@ run_hpl()
 	echo  "$MPI_PATH/bin/mpirun --allow-run-as-root -np $num_mpi --mca btl self,vader --report-bindings $bind_settings ./xhpl" > $outfile
 
 	echo "     T/V           N    NB     P     Q               Time                 Gflops"  >> $outfile
+	start_time=$(retrieve_time_stamp)
 	for i in $(seq "$NUM_ITER")
 	do
 		$MPI_PATH/bin/mpirun --allow-run-as-root -np $num_mpi --mca btl self,vader --report-bindings $bind_settings ./xhpl 2>&1 > hpl.out
 		cat hpl.out | grep -E "WC|WR"  >> $outfile
-	if [[ $to_use_pcp -eq 1 ]]; then
-		hpl_result_line=$(grep -E "WC|WR" hpl.out)
-		if [[ -n "$hpl_result_line" ]]; then
-			read time_val gflops_val <<< $(echo "$hpl_result_line" | awk '{print $(NF-1), $NF}')
- 			result2pcp hpl_time "$time_val"
- 			result2pcp hpl_gflops "$gflops_val"
+		if [[ $to_use_pcp -eq 1 ]]; then
+			hpl_result_line=$(grep -E "WC|WR" hpl.out)
+			if [[ -n "$hpl_result_line" ]]; then
+				read time_val gflops_val <<< $(echo "$hpl_result_line" | awk '{print $(NF-1), $NF}')
+				results2pcp_multiple "iteration:${i},numthread:${NOMP},hpl_time:${time_val},hpl_gflops:${gflops_val}"
+				reset_pcp_om
+			fi
 		fi
-	fi
 	done
+	end_time=$(retrieve_time_stamp)
 	cp $outfile $SCRIPT_DIR
 	cd $SCRIPT_DIR
 }
@@ -833,6 +835,7 @@ if [[ $to_use_pcp -eq 1 ]]; then
     start_pcp ${pcpdir}/ ${test_name} $pcp_cfg
 fi
 
+out_file=""
 range=`seq 1 1 $to_times_to_run`
 for iteration in $range; do
 	#start PCP subset for iterations
@@ -849,14 +852,16 @@ for iteration in $range; do
 	${curdir}/test_tools/move_data $curdir ${RESULTSDIR}
 	for results in `ls -d *log`; do
   		out_file=`echo $results | sed "s/\.log/\.csv/g"`
-		$TOOLS_BIN/test_header_info --front_matter --results_file $out_file --host $to_configuration --sys_type $to_sys_type --tuned $to_tuned_setting --results_version $results_version --test_name $test_name
 		meta=`head -1 $results`
-		$TOOLS_BIN/test_header_info --test_name ${test_name} --meta_output "$meta" --results_file $out_file
-  		tail -n +2  $results | tr -s ' ' | sed "s/^ //g" | sed "s/ /:/g" >> $out_file
+		$TOOLS_BIN/test_header_info --front_matter --results_file $out_file --host $to_configuration --sys_type $to_sys_type --tuned $to_tuned_setting --results_version $results_version --test_name $test_name --field_header "T/V,N,NB,P,Q,Time,Gflops" --results_file $out_file --meta_output "$meta"
+  		res_string=`tail -n 1  $results | tr -s ' ' | sed "s/^ //g" | sed "s/ /,/g"`
+		#
+		# Can not use generic build_data_string, due to the res_string already built.
+		#
+		echo "$res_string","$start_time","$end_time" >> $out_file
 	done
 	# stop PCP subset for iterations
 	if [[ $to_use_pcp -eq 1 ]]; then
-      	    echo "Send result to PCP archive for iteration $iteration"
             stop_pcp_subset
 	fi
 	if [ $sleep_for -ne 0 ];then
