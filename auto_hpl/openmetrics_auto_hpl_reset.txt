@@ -4,4 +4,4 @@ numthread NaN
 runtime NaN
 throughput NaN
 hpl_gflops NaN
-hpl_time NAN
+hpl_time NaN
