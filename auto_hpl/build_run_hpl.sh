@@ -81,8 +81,8 @@ sleep_for=0
 #
 TOOLS_BIN=${HOME}/test_tools
 export TOOLS_BIN
-if [ ! -d "${HOME}/test_tools" ]; then
-	git clone $tools_git ${HOME}/test_tools
+if [ ! -d "${TOOLS_BIN}" ]; then
+	git clone $tools_git ${TOOLS_BIN}
 	if [ $? -ne 0 ]; then
 		exit_out "pulling git $tools_git failed." 1
 	fi
