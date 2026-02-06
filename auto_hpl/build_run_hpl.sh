@@ -26,7 +26,7 @@
 export LANG=C
 arguments="$@"
 results_version="1.0"
-rtc=$?
+script_dir=$(realpath $(dirname $0))
 
 exit_out()
 {
@@ -75,6 +75,20 @@ SCRIPT_DIR=$run_dir
 tools_git=https://github.com/redhat-performance/test_tools-wrappers
 sleep_for=0
 
+#
+# Check to see if the test tools directory exists.  If it does, we do not need to
+# clone the repo.
+#
+TOOLS_BIN=${HOME}/test_tools
+export TOOLS_BIN
+if [ ! -d "${TOOLS_BIN}" ]; then
+	git clone $tools_git ${TOOLS_BIN}
+	if [ $? -ne 0 ]; then
+		exit_out "pulling git $tools_git failed." 1
+	fi
+fi
+
+
 usage()
 {
 	echo Usage $1:
@@ -83,7 +97,7 @@ usage()
 	echo "  --use_mkl: use the mkl lib."
 	echo "  --use_blis: use the blis lib."
 	echo "  --regression: limit the amount of memory for regression."
-	source test_tools/general_setup --usage
+	source ${TOOLS_BIN}/general_setup --usage
 	exit 0
 }
 
@@ -107,17 +121,6 @@ for arg in "$@"; do
 		usage $0
 	fi
 done
-
-#
-# Check to see if the test tools directory exists.  If it does, we do not need to
-# clone the repo.
-#
-if [ ! -d "test_tools" ]; then
-	git clone $tools_git test_tools
-	if [ $? -ne 0 ]; then
-		exit_out "pulling git $tools_git failed." 1
-	fi
-fi
 
 # Variables set by general setup.
 # TOOLS_BIN: points to the tool directory
@@ -634,7 +637,7 @@ run_hpl()
 	echo  "$MPI_PATH/bin/mpirun --allow-run-as-root -np $num_mpi --mca btl self,vader --report-bindings $bind_settings ./xhpl"
 	echo  "$MPI_PATH/bin/mpirun --allow-run-as-root -np $num_mpi --mca btl self,vader --report-bindings $bind_settings ./xhpl" > $outfile
 
-	echo "     T/V           N    NB     P     Q               Time                 Gflops"  >> $outfile
+	echo "     TV           N    NB     P     Q               Time                 Gflops"  >> $outfile
 	start_time=$(retrieve_time_stamp)
 	for i in $(seq "$NUM_ITER")
 	do
@@ -713,7 +716,7 @@ regression=0
 #
 # We are still operating at the level test tools was installed at.
 #
-source test_tools/general_setup "$@"
+source ${TOOLS_BIN}/general_setup "$@"
 
 # Import MPI setup library for centralized MPI configuration
 source ${run_dir}/mpi_setup_lib.sh
@@ -820,7 +823,7 @@ echo "Installing general packages..."
 $TOOLS_BIN/package_tool --wrapper_config ${run_dir}/general_packages.json --no_packages $to_no_pkg_install
 
 # Gather hardware information
-${curdir}/test_tools/gather_data ${curdir}
+${TOOLS_BIN}/gather_data ${curdir}
 
 #Setup and start PCP if --use_pcp is passed
 # using pdir 
@@ -849,15 +852,12 @@ for iteration in $range; do
 	mv hpl* $rdir
 	cd $rdir
 	cp ${curdir}/meta_data*.yml .
-	${curdir}/test_tools/move_data $curdir ${RESULTSDIR}
+	${TOOLS_BIN}/move_data $curdir ${RESULTSDIR}
 	for results in `ls -d *log`; do
   		out_file=`echo $results | sed "s/\.log/\.csv/g"`
 		meta=`head -1 $results`
-		$TOOLS_BIN/test_header_info --front_matter --results_file $out_file --host $to_configuration --sys_type $to_sys_type --tuned $to_tuned_setting --results_version $results_version --test_name $test_name --field_header "T/V,N,NB,P,Q,Time,Gflops" --results_file $out_file --meta_output "$meta"
+		$TOOLS_BIN/test_header_info --front_matter --results_file $out_file --host $to_configuration --sys_type $to_sys_type --tuned $to_tuned_setting --results_version $results_version --test_name $test_name --field_header "TV,N,NB,P,Q,Time,Gflops" --results_file $out_file --meta_output "$meta"
   		res_string=`tail -n 1  $results | tr -s ' ' | sed "s/^ //g" | sed "s/ /,/g"`
-		#
-		# Can not use generic build_data_string, due to the res_string already built.
-		#
 		echo "$res_string","$start_time","$end_time" >> $out_file
 	done
 	# stop PCP subset for iterations
@@ -876,7 +876,8 @@ if [[ $to_use_pcp -eq 1 ]]; then
 	shutdown_pcp
 fi
 cp $out_file results_auto_hpl.csv
-#$TOOLS_BIN/validate_line --results_file results_auto_hpl.csv --base_results_file $run_dir/base_test_results/test1/verify
+$TOOLS_BIN/csv_to_json $to_json_flags --csv_file results_auto_hpl.csv --output_file results_auto_hpl.json
+$TOOLS_BIN/verify_results $to_verify_flags --schema_file $script_dir/result_schema.py --class_name AutoHPL_Results --file results_auto_hpl.json
 rtc=$?
 $TOOLS_BIN/save_results --curdir $curdir --home_root $to_home_root --other_files "${curdir}/auto_hpl.out,*csv,test_results_report" --results $out_file  --test_name $test_name --tuned_setting=$to_tuned_setting --version NONE --user $to_user $pdir
 exit $rtc
