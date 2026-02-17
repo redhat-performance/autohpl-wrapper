@@ -877,7 +877,18 @@ if [[ $to_use_pcp -eq 1 ]]; then
 fi
 cp $out_file results_auto_hpl.csv
 $TOOLS_BIN/csv_to_json $to_json_flags --csv_file results_auto_hpl.csv --output_file results_auto_hpl.json
-$TOOLS_BIN/verify_results $to_verify_flags --schema_file $script_dir/result_schema.py --class_name AutoHPL_Results --file results_auto_hpl.json
-rtc=$?
+if [[ $? -ne 0 ]]; then
+	echo Error: $TOOLS_BIN/csv_to_json $to_json_flags --csv_file results_auto_hpl.csv --output_file results_auto_hpl.json returned failure
+	rtc=2
+else
+	$TOOLS_BIN/verify_results $to_verify_flags --schema_file $script_dir/result_schema.py --class_name AutoHPL_Results --file results_auto_hpl.json
+	rtc=$?
+	if [[ $rtc -ne 0 ]]; then
+		echo Error: $TOOLS_BIN/verify_results $to_verify_flags --schema_file $script_dir/result_schema.py --class_name AutoHPL_Results --file results_auto_hpl.json failed.
+	fi
+fi
+#
+# We still save the results for future reference.
+#
 $TOOLS_BIN/save_results --curdir $curdir --home_root $to_home_root --other_files "${curdir}/auto_hpl.out,*csv,test_results_report" --results $out_file  --test_name $test_name --tuned_setting=$to_tuned_setting --version NONE --user $to_user $pdir
 exit $rtc
