@@ -689,7 +689,7 @@ install_run_hpl()
 			echo "Amazon Linux 2: Using OpenBLAS compiled from source"
 		else
 			echo "Installing OpenBLAS packages..."
-			$TOOLS_BIN/package_tool --wrapper_config ${run_dir}/openblas_packages.json --no_packages $to_no_pkg_install
+			package_tool --wrapper_config ${run_dir}/openblas_packages.json --no_packages $to_no_pkg_install
 		fi
 
 		# Use centralized MPI environment setup (includes CPATH for compilation)
@@ -820,7 +820,7 @@ run_times=0
 
 # Install general packages required for HPL build and execution
 echo "Installing general packages..."
-$TOOLS_BIN/package_tool --wrapper_config ${run_dir}/general_packages.json --no_packages $to_no_pkg_install
+package_tool --wrapper_config ${run_dir}/general_packages.json --no_packages $to_no_pkg_install
 
 # Gather hardware information
 ${TOOLS_BIN}/gather_data ${curdir}
