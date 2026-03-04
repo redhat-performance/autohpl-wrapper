@@ -84,7 +84,7 @@ export TOOLS_BIN
 if [ ! -d "${TOOLS_BIN}" ]; then
 	git clone $tools_git ${TOOLS_BIN}
 	if [ $? -ne 0 ]; then
-		exit_out "pulling git $tools_git failed." 1
+		exit_out "pulling git $tools_git failed." $E_GENERAL
 	fi
 fi
 
@@ -172,20 +172,20 @@ size_platform()
 		elif [[ "$vendor" == *"GenuineIntel"* ]]; then
 			vendor="Intel"
 		else
-			exit_out "Unrecognized CPU vendor ${vendor}, exiting" 1
+			exit_out "Unrecognized CPU vendor ${vendor}, exiting" $E_GENERAL
 		fi
 		if [[ "$vendor" -ne "AMD" && "$use_blis" == 1 ]]; then
-			exit_out "BLIS library support is only for AMD CPUs" 1
+			exit_out "BLIS library support is only for AMD CPUs" $E_GENERAL
 		fi
 		if [[ "$vendor" -ne "Intel" && "use_mkl" == 1 ]]; then
-			exit_out "Error: mkl is only for INTEL" 1
+			exit_out "Error: mkl is only for INTEL" $E_GENERAL
 		fi
 	elif [[ "$arch" == "aarch64" ]]; then
 		BLAS_MT=1
 		# Use centralized MPI path function
 		MPI_PATH=$(get_mpi_path)
 	else
-		exit_out "Error: Architecture $arch is unsupported" 1
+		exit_out "Error: Architecture $arch is unsupported" $E_GENERAL
 	fi
 	model=$(grep "Model:" $LSCPU | cut -d: -f 2|sed -e s/^[[:space:]]*//g -e s/[[:space:]]*$//g)
 	stepping=$(grep "Stepping:" $LSCPU | cut -d: -f 2)
@@ -280,13 +280,13 @@ size_platform()
 			# Intel
 			NBS=256
    		else
-     			exit_out "Error: Arch ${arch} is supported, but family $family or model $model is not, exiting" 1
+			exit_out "Error: Arch ${arch} is supported, but family $family or model $model is not, exiting" $E_GENERAL
 		fi
 	elif [[ "$arch" == "aarch64" ]]; then
 		# Honestly this is just a guess, sadly
 		NBS=256
 	else
-		exit_out "Error: Unsupported arch ${arch}, exiting" 1
+		exit_out "Error: Unsupported arch ${arch}, exiting" $E_GENERAL
 	fi
 	# Now we have to round N to a multiple of NBS to prevent a fragment at the end
 	NS=$((NS / NBS))
@@ -373,7 +373,7 @@ EOF
 		fi
 		yum -y install intel-mkl
 		if [ $? -ne 0 ]; then
-			exit_out "echo Error: install of mkl failed" 1
+			exit_out "echo Error: install of mkl failed" $E_GENERAL
 		fi
 	fi
 	if [ $ubuntu -eq 1 ]; then
@@ -387,21 +387,21 @@ EOF
 		# keys taken from https://software.intel.com/en-us/articles/installing-intel-free-libs-and-python-apt-repo
 		wget https://apt.repos.intel.com/intel-gpg-keys/GPG-PUB-KEY-INTEL-SW-PRODUCTS-2019.PUB
 		if [ $? -ne 0 ]; then
-			exit_out "Error: wget failed on https://apt.repos.intel.com/intel-gpg-keys/GPG-PUB-KEY-INTEL-SW-PRODUCTS-2019.PUB" 1
+			exit_out "Error: wget failed on https://apt.repos.intel.com/intel-gpg-keys/GPG-PUB-KEY-INTEL-SW-PRODUCTS-2019.PUB" $E_GENERAL
 		fi
 		apt-key add GPG-PUB-KEY-INTEL-SW-PRODUCTS-2019.PUB
 		if [ $? -ne 0 ]; then
-			exit_out "Error: apt key add failed on GPG-PUB-KEY-INTEL-SW-PRODUCTS-2019.PUB" 1
+			exit_out "Error: apt key add failed on GPG-PUB-KEY-INTEL-SW-PRODUCTS-2019.PUB" $E_GENERAL
 		fi
 
 		sh -c 'echo deb https://apt.repos.intel.com/mkl all main > /etc/apt/sources.list.d/intel-mkl.list'
 		apt-get update
 		if [ $? -ne 0 ]; then
-			exit_out "Error: apt key get update failed" 1
+			exit_out "Error: apt key get update failed" $E_GENERAL
 		fi
 		apt-get --yes install  intel-mkl
 		if [ $? -ne 0 ]; then
-			exit_out "Error: apt key get install failed" 1
+			exit_out "Error: apt key get install failed" $E_GENERAL
 		fi
 		popd
 	fi
@@ -415,27 +415,27 @@ check_mpi()
 		if [[ "$?" != "0" ]]; then
 			yum -y install openmpi openmpi-devel
 			if [ $? -ne 0 ]; then
-				exit_out "Error: yum install openmpi openmpi-devel" 1
+				exit_out "Error: yum install openmpi openmpi-devel" $E_GENERAL
 			fi
 		fi
 	fi
 	if [ $ubuntu -eq 1 ]; then
 		apt-get --yes install openmpi-bin openmpi-common
 		if [ $? -ne 0 ]; then
-			exit_out "apt-get openmpi-bin openmpi-common failed." 1
+			exit_out "apt-get openmpi-bin openmpi-common failed." $E_GENERAL
 		fi
 	fi
 
 	# Use centralized MPI environment setup
 	setup_mpi_environment "$arch"
 	if [ $? -ne 0 ]; then
-		exit_out "Error: MPI environment setup failed" 1
+		exit_out "Error: MPI environment setup failed" $E_GENERAL
 	fi
 
 	# Verify mpirun is available
 	which mpirun > /dev/null 2>&1
 	if [ $? -ne 0 ]; then
-		exit_out "Error: mpirun not in path after setup" 1
+		exit_out "Error: mpirun not in path after setup" $E_GENERAL
 	fi
 }
 
@@ -446,7 +446,7 @@ build_blis()
 
 	eval "mkdir -p blis"
 	if [[ $? -ne 0 ]]; then
-		exit_out  "\nUnable to create Directory blis. Try with sudo \n" 1
+		exit_out  "\nUnable to create Directory blis. Try with sudo \n" $E_GENERAL
 	fi
 	cd blis
 
@@ -454,13 +454,13 @@ build_blis()
 	# create directories
 	eval "mkdir -p $blisdir"
 	if [[ $? -ne 0 ]]; then
-		exit_out "\nUnable to create Directory $blisdir. Try with sudo \n" 1
+		exit_out "\nUnable to create Directory $blisdir. Try with sudo \n" $E_GENERAL
 	fi
 
 	echo "Cloning AMD BLIS from https://github.com/amd/blis.git"
 	git clone https://github.com/amd/blis.git
 	if [ $? -ne 0 ]; then
-		exit_out "Error: git clone https://github.com/amd/blis.git failed" 1
+		exit_out "Error: git clone https://github.com/amd/blis.git failed" $E_GENERAL
 	fi
 
 	cd blis
@@ -474,15 +474,15 @@ build_blis()
 	echo ./configure --enable-shared --enable-cblas $enableblismt --prefix=$blisdir zen
 	./configure --enable-shared --enable-cblas $enableblismt --prefix=$blisdir zen 2>&1 > ${RESULTSDIR}/blis_config.out
 	if [ $? -ne 0 ]; then
-		exit_out "Error: ./configure --enable-shared --enable-cblas $enableblismt --prefix=$blisdir zen failed" 1
+		exit_out "Error: ./configure --enable-shared --enable-cblas $enableblismt --prefix=$blisdir zen failed" $E_GENERAL
 	fi
   	make -j 50 2>&1 > ${RESULTSDIR}/blis_make.out
   	if [ $? -ne 0 ]; then
-		exit_out "Error: make -j 50 2>&1 > ${RESULTSDIR}/blis_make.out failed" 1
+		exit_out "Error: make -j 50 2>&1 > ${RESULTSDIR}/blis_make.out failed" $E_GENERAL
 	fi
 	make install 2>&1 > ${RESULTSDIR}/blis_make_install.out
 	if [ $? -ne 0 ]; then
-		exit_out "Error: make install failed" 1
+		exit_out "Error: make install failed" $E_GENERAL
 	fi
 }
 
@@ -494,16 +494,16 @@ build_hpl()
 	# create directories
 	eval "mkdir -p $HPL_PATH"
 	if [[ $? -ne 0 ]]; then
-		exit_out "\nUnable to create Directory $HPL_PATH. Try with sudo \n" 1
+		exit_out "\nUnable to create Directory $HPL_PATH. Try with sudo \n" $E_GENERAL
 	fi
 	cd $HPL_PATH
 	wget $HPL_LINK
 	if [ $? -ne 0 ]; then
-		exit_out "Error: wget $HPL_LINK failed." 1
+		exit_out "Error: wget $HPL_LINK failed." $E_GENERAL
 	fi
 	tar -xf hpl-$HPL_VER.tar.gz
 	if [ $? -ne 0 ]; then
-		exit_out "Error: tar -xf hpl-$HPL_VER.tar.gz failed" 1
+		exit_out "Error: tar -xf hpl-$HPL_VER.tar.gz failed" $E_GENERAL
 	fi
 	cd hpl-$HPL_VER
 
@@ -587,7 +587,7 @@ build_hpl()
 		--output "${run_dir}/Make.Linux_${blaslib}.generated"
 
 	if [ $? -ne 0 ]; then
-		exit_out "Error: generate_makefile.sh failed" 1
+		exit_out "Error: generate_makefile.sh failed" $E_GENERAL
 	fi
 
 	# Use generated makefile with TOPDIR substitution
@@ -596,7 +596,7 @@ build_hpl()
 	bindir=Linux_${blaslib}
 	make arch=Linux_${blaslib} 2>&1 > ${RESULTSDIR}/hpl_make.out
 	if [ $? -ne 0 ]; then
-		exit_out "Error: make arch=Linux_${blaslib} 2>&1 > ${RESULTSDIR}/hpl_make.out" 1
+		exit_out "Error: make arch=Linux_${blaslib} 2>&1 > ${RESULTSDIR}/hpl_make.out" $E_GENERAL
 	fi
 }
 
@@ -690,18 +690,22 @@ install_run_hpl()
 		else
 			echo "Installing OpenBLAS packages..."
 			package_tool --wrapper_config ${run_dir}/openblas_packages.json --no_packages $to_no_pkg_install
+			rtc=$?
+			if [[ $rtc -ne 0 ]]; then
+				exit_out "Install of OpenBLAS packages failed" $rtc
+			fi
 		fi
 
 		# Use centralized MPI environment setup (includes CPATH for compilation)
 		setup_mpi_environment "$arch" true
 		if [ $? -ne 0 ]; then
-			exit_out "Error: MPI environment setup failed" 1
+			exit_out "Error: MPI environment setup failed" $E_GENERAL
 		fi
 
 		# Verify mpirun is available
 		which mpirun > /dev/null 2>&1
 		if [ $? -ne 0 ]; then
-			exit_out "Error: mpirun not in path after MPI setup" 1
+			exit_out "Error: mpirun not in path after MPI setup" $E_GENERAL
 		fi
 	fi
 
@@ -743,7 +747,7 @@ opts=$(getopt \
 )
 
 if [ $? -ne 0 ]; then
-	exit_out "need to provide arguments." 1
+	exit_out "need to provide arguments." $E_NO_ARGS
 fi
 
 eval set --$opts
@@ -778,7 +782,7 @@ while [[ $# -gt 0 ]]; do
 			break
 		;;
 		*)
-			exit_out "option $1 not found" 1
+			exit_out "option $1 not found" $E_USAGE
 		;;
 	esac
 done
@@ -791,7 +795,7 @@ if [ "${info}" == "amzn2" ]; then
 	pushd src
 	git clone https://github.com/xianyi/OpenBLAS
 	if [ $? -ne 0 ]; then
-		exit_out "git clone https://github.com/xianyi/OpenBLAS failed" 1
+		exit_out "git clone https://github.com/xianyi/OpenBLAS failed" $E_GENERAL
 	fi
 	cd OpenBLAS
 	make FC=gfortran
@@ -807,7 +811,7 @@ fi
 
 # --regression and --mem_size are mutually exclusive, bail if both are set
 if [ ${mem_size} -ne 0 ] && [ ${regression} -ne 0 ]; then
-	exit_out "You can't use both --regression and --mem_size, exiting." 1
+	exit_out "You can't use both --regression and --mem_size, exiting." $E_GENERAL
 fi
 
 RESULTSDIR_OUT=results_auto_hpl_${to_tuned_setting}_$(date "+%Y.%m.%d-%H.%M.%S")
@@ -876,10 +880,13 @@ if [[ $to_use_pcp -eq 1 ]]; then
 	shutdown_pcp
 fi
 cp $out_file results_auto_hpl.csv
+#
+# We hav gotten this far, do not exit if we encounter errors as we want to try and save the results.
+#
 $TOOLS_BIN/csv_to_json $to_json_flags --csv_file results_auto_hpl.csv --output_file results_auto_hpl.json
-if [[ $? -ne 0 ]]; then
+rtc=$?
+if [[ $rtc -ne 0 ]]; then
 	echo Error: $TOOLS_BIN/csv_to_json $to_json_flags --csv_file results_auto_hpl.csv --output_file results_auto_hpl.json returned failure
-	rtc=2
 else
 	$TOOLS_BIN/verify_results $to_verify_flags --schema_file $script_dir/result_schema.py --class_name AutoHPL_Results --file results_auto_hpl.json
 	rtc=$?
