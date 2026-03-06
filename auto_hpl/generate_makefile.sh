@@ -4,6 +4,7 @@
 # Generates platform-specific makefiles from template to avoid duplication
 #
 
+source $TOOLS_BIN/error_codes
 usage() {
     echo "Usage: $0 --template TEMPLATE_FILE --arch ARCH --blas-lib BLAS_LIB --mpi-inc MPI_INC --output OUTPUT_FILE [--blas-dir BLAS_DIR]"
     echo ""
