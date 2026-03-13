@@ -94,7 +94,7 @@ attempt_tools_wget()
         fi
 }
 
-attetmpt_tools_curl()
+attempt_tools_curl()
 {
         if [[ ! -d "$TOOLS_BIN" ]]; then
                 curl -L -O ${tools_git}/archive/refs/heads/main.zip
@@ -117,7 +117,7 @@ attempt_tools_git()
 }
 
 attempt_tools_wget
-attetmpt_tools_curl
+attempt_tools_curl
 attempt_tools_git
 
 usage()
