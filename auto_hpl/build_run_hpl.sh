@@ -129,7 +129,7 @@ usage()
 	echo "  --use_blis: use the blis lib."
 	echo "  --regression: limit the amount of memory for regression."
 	source ${TOOLS_BIN}/general_setup --usage
-	exit 0
+	exit $E_USAGE
 }
 
 found=0
