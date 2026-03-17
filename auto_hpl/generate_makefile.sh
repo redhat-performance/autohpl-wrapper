@@ -15,7 +15,7 @@ usage() {
     echo "  --mpi-inc    : MPI include path (e.g., /usr/include/openmpi-x86_64)"
     echo "  --output     : Output makefile path"
     echo "  --blas-dir   : Optional BLAS library directory (for BLIS custom builds)"
-    exit 1
+    exit $E_USAGE
 }
 
 # Parse arguments
@@ -61,7 +61,7 @@ fi
 
 if [ ! -f "$TEMPLATE" ]; then
     echo "Error: Template file '$TEMPLATE' not found"
-    exit 1
+    exit $E_GENERAL
 fi
 
 # Generate makefile from template
@@ -153,8 +153,8 @@ fi
 
 if [ $? -eq 0 ]; then
     echo "Makefile generated successfully: $OUTPUT"
-    exit 0
+    exit $E_SUCCESS
 else
     echo "Error: Failed to generate makefile"
-    exit 1
+    exit $E_GENERAL
 fi

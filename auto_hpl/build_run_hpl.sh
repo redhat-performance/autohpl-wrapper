@@ -81,13 +81,44 @@ sleep_for=0
 #
 TOOLS_BIN=${HOME}/test_tools
 export TOOLS_BIN
-if [ ! -d "${TOOLS_BIN}" ]; then
-	git clone $tools_git ${TOOLS_BIN}
-	if [ $? -ne 0 ]; then
-		exit_out "pulling git $tools_git failed." $E_GENERAL
-	fi
-fi
 
+attempt_tools_wget()
+{
+        if [[ ! -d "$TOOLS_BIN" ]]; then
+                wget ${tools_git}/archive/refs/heads/main.zip
+                if [[ $? -eq 0 ]]; then
+                        unzip -q main.zip
+                        mv test_tools-wrappers-main ${TOOLS_BIN}
+                        rm main.zip
+                fi
+        fi
+}
+
+attempt_tools_curl()
+{
+        if [[ ! -d "$TOOLS_BIN" ]]; then
+                curl -L -O ${tools_git}/archive/refs/heads/main.zip
+                if [[ $? -eq 0 ]]; then
+                        unzip -q main.zip
+                        mv test_tools-wrappers-main ${TOOLS_BIN}
+                        rm main.zip
+                fi
+        fi
+}
+
+attempt_tools_git()
+{
+        if [[ ! -d "$TOOLS_BIN" ]]; then
+                git clone $tools_git "$TOOLS_BIN"
+                if [ $? -ne 0 ]; then
+                        exit_out "Error: pulling git $tools_git failed." 101
+                fi
+        fi
+}
+
+attempt_tools_wget
+attempt_tools_curl
+attempt_tools_git
 
 usage()
 {
@@ -98,7 +129,7 @@ usage()
 	echo "  --use_blis: use the blis lib."
 	echo "  --regression: limit the amount of memory for regression."
 	source ${TOOLS_BIN}/general_setup --usage
-	exit 0
+	exit $E_USAGE
 }
 
 found=0
