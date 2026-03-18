@@ -2,101 +2,128 @@
 
 ## Description
 
-This wrapper automates running the HPL (High Performance LINPACK) benchmark, a widely used measure of a system's floating-point computing power. HPL solves a dense system of linear equations and reports performance in GFLOPS (billions of floating-point operations per second).
+This wrapper facilitates the automated execution of the High Performance LINPACK (HPL) benchmark. HPL is a standard metric for assessing a system's floating-point computational capabilities, measuring performance in GFLOPS (billions of floating-point operations per second) by solving a dense system of linear equations.
 
 The wrapper provides:
-- Automated HPL download, build, and execution
-- Support for multiple BLAS libraries (AMD BLIS, Intel MKL, OpenBLAS)
-- Automatic problem sizing based on system memory
-- Support for x86_64 (AMD/Intel) and aarch64 (ARM) architectures
-- Automatic MPI process grid calculation (P x Q)
-- Result collection, processing, and verification
-- CSV and JSON output formats
-- System configuration metadata capture
-- Integration with test_tools framework
-- Optional Performance Co-Pilot (PCP) integration
+- Automated HPL download, build, and execution.
+- Support for multiple BLAS libraries (AMD BLIS, Intel MKL, OpenBLAS).
+- Automatic problem sizing based on system memory.
+- Support for x86_64 (AMD/Intel) and aarch64 (ARM) architectures.
+- Automatic MPI process grid calculation (P x Q).
+- Result collection, processing, and verification.
+- CSV and JSON output formats.
+- System configuration metadata capture.
+- Integration with test_tools framework.
+- Optional Performance Co-Pilot (PCP) integration.
+
+## Command-Line Options
+
+```
+Auto HPL Options:
+  --mem_size <value>: Designate the size of memory to work with (in GiB).
+      Overrides automatic memory detection. Useful for testing with reduced memory.
+  --sleep_between_runs <value>: Sleep this number of seconds before starting the next run.
+      Useful for allowing system to stabilize between iterations.
+  --use_mkl: Use Intel MKL library (Intel CPUs only).
+  --use_blis: Use AMD BLIS library (AMD CPUs only).
+  --regression: Limit the amount of memory for regression testing (uses N/4).
+
+General test_tools options:
+  --home_parent <value>: Parent home directory. If not set, defaults to current working directory.
+  --host_config <value>: Host configuration name, defaults to current hostname.
+  --iterations <value>: Number of times to run the test, defaults to 1.
+  --run_user: User that is actually running the test on the test system. Defaults to current user.
+  --sys_type: Type of system working with (aws, azure, hostname). Defaults to hostname.
+  --sysname: Name of the system running, used in determining config files. Defaults to hostname.
+  --tuned_setting: Used in naming the results directory. For RHEL, defaults to current active tuned profile.
+      For non-RHEL systems, defaults to 'none'.
+  --use_pcp: Enable Performance Co-Pilot monitoring during test execution.
+  --tools_git <value>: Git repo to retrieve the required tools from.
+      Default: https://github.com/redhat-performance/test_tools-wrappers
+  --usage: Display this usage message.
+```
 
 ## What the Script Does
 
 The `build_run_hpl.sh` script performs the following workflow:
 
 1. **Environment Setup**:
-   - Clones the test_tools-wrappers repository if not present (default: ~/test_tools)
-   - Sources error codes and general setup utilities
-   - Sets up MPI environment using centralized configuration
+   - Clones the test_tools-wrappers repository if not present (default: ~/test_tools).
+   - Sources error codes and general setup utilities.
+   - Sets up MPI environment using centralized configuration.
 
 2. **Package Installation**:
-   - Installs required dependencies via package_tool (gcc, make, gfortran, wget, etc.)
-   - Dependencies are defined in general_packages.json and openblas_packages.json for different OS variants (RHEL, Ubuntu, SLES, Amazon Linux)
+   - Installs required dependencies via package_tool (gcc, make, gfortran, wget, etc.).
+   - Dependencies are defined in general_packages.json and openblas_packages.json for different OS variants (RHEL, Ubuntu, SLES, Amazon Linux).
 
 3. **BLAS Library Selection**:
-   - **AMD Systems**: Uses AMD BLIS (with `--use_blis`) or OpenBLAS (default)
-   - **Intel Systems**: Uses Intel MKL (with `--use_mkl`) or OpenBLAS (default)
-   - **ARM Systems**: Uses OpenBLAS with OpenMP
+   - **AMD Systems**: Uses AMD BLIS (with `--use_blis`) or OpenBLAS (default).
+   - **Intel Systems**: Uses Intel MKL (with `--use_mkl`) or OpenBLAS (default).
+   - **ARM Systems**: Uses OpenBLAS with OpenMP.
 
 4. **Library Build/Installation**:
-   - For AMD BLIS: Clones and builds from source with OpenMP support
-   - For Intel MKL: Installs from Intel repositories
-   - For OpenBLAS: Installs from system packages or builds from source (Amazon Linux 2)
+   - For AMD BLIS: Clones and builds from source with OpenMP support.
+   - For Intel MKL: Installs from Intel repositories.
+   - For OpenBLAS: Installs from system packages or builds from source (Amazon Linux 2).
 
 5. **HPL Build**:
-   - Downloads HPL 2.3 from netlib.org
-   - Generates architecture-specific Makefile using generate_makefile.sh
-   - Detects MPI include paths for different OS/architecture combinations
-   - Compiles HPL binary (xhpl) with selected BLAS library
+   - Downloads HPL 2.3 from netlib.org.
+   - Generates architecture-specific Makefile using generate_makefile.sh.
+   - Detects MPI include paths for different OS/architecture combinations.
+   - Compiles HPL binary (xhpl) with selected BLAS library.
 
 6. **Problem Sizing**:
-   - Automatically detects system memory and CPU topology
-   - Calculates problem size (N) to use ~86% of available memory
-   - Determines optimal block size (NB) based on CPU family/model
-   - Calculates MPI process grid (P x Q) for optimal performance
-   - Determines OpenMP thread count based on cache topology
+   - Automatically detects system memory and CPU topology.
+   - Calculates problem size (N) to use ~86% of available memory.
+   - Determines optimal block size (NB) based on CPU family/model.
+   - Calculates MPI process grid (P x Q) for optimal performance.
+   - Determines OpenMP thread count based on cache topology.
 
 7. **Test Execution**:
-   - Generates HPL.dat input file with calculated parameters
-   - Runs HPL with optimized MPI process binding
-   - Executes for specified number of iterations
-   - Captures performance results (time and GFLOPS)
+   - Generates HPL.dat input file with calculated parameters.
+   - Runs HPL with optimized MPI process binding.
+   - Executes for specified number of iterations.
+   - Captures performance results (time and GFLOPS).
 
 8. **Data Collection**:
-   - Captures system configuration (CPU, memory, NUMA topology, kernel version)
-   - Records HPL configuration parameters (N, NB, P, Q)
-   - Logs timestamps for each test run
-   - Optionally records PCP performance data
+   - Captures system configuration (CPU, memory, NUMA topology, kernel version).
+   - Records HPL configuration parameters (N, NB, P, Q).
+   - Logs timestamps for each test run.
+   - Optionally records PCP performance data.
 
 9. **Result Processing**:
-   - Extracts performance metrics from HPL output
-   - Generates CSV files with configuration and performance data
-   - Creates JSON output for verification
-   - Validates results against Pydantic schema
+   - Extracts performance metrics from HPL output.
+   - Generates CSV files with configuration and performance data.
+   - Creates JSON output for verification.
+   - Validates results against Pydantic schema.
 
 10. **Verification**:
-    - Validates results against Pydantic schema (result_schema.py)
-    - Ensures all required fields are present and valid
-    - Uses csv_to_json and verify_results from test_tools
+    - Validates results against Pydantic schema (result_schema.py).
+    - Ensures all required fields are present and valid.
+    - Uses csv_to_json and verify_results from test_tools.
 
 11. **Output**:
-    - Creates timestamped results directory: `results_auto_hpl_<tuned_setting>_<YYYYMMDDHHMMSS>`
-    - Saves all raw output files, processed CSV/JSON, and system metadata
-    - Optionally saves PCP performance data
-    - Archives results to configured storage location
+    - Creates timestamped results directory: `results_auto_hpl_<tuned_setting>_<YYYYMMDDHHMMSS>`.
+    - Saves all raw output files, processed CSV/JSON, and system metadata.
+    - Optionally saves PCP performance data.
+    - Archives results to configured storage location.
 
 ## Dependencies
 
-Location of underlying workload: Downloaded from http://www.netlib.org/benchmark/hpl/hpl-2.3.tar.gz
+Location of underlying workload: Downloaded from http://www.netlib.org/benchmark/hpl/hpl-2.3.tar.gz.
 
 **General packages required**: gcc, make, gcc-gfortran, wget, bc, perf, git, zip, unzip, numactl, dmidecode
 
 **Additional packages for OpenBLAS builds**:
-- RHEL: flexiblas, flexiblas-devel, flexiblas-openblas-openmp, openmpi, openmpi-devel
-- Ubuntu: libopenblas-dev, libopenblas-openmp-dev, openmpi-bin, openmpi-common, libopenmpi-dev
-- SLES: openblas-devel, openmpi, openmpi-devel
-- Amazon Linux: openblas-devel (or built from source), openmpi, openmpi-devel
+- RHEL: flexiblas, flexiblas-devel, flexiblas-openblas-openmp, openmpi, openmpi-devel.
+- Ubuntu: libopenblas-dev, libopenblas-openmp-dev, openmpi-bin, openmpi-common, libopenmpi-dev.
+- SLES: openblas-devel, openmpi, openmpi-devel.
+- Amazon Linux: openblas-devel (or built from source), openmpi, openmpi-devel.
 
 **BLAS Library Options**:
-- **AMD BLIS**: Built from source (https://github.com/amd/blis.git)
-- **Intel MKL**: Installed from Intel repositories
-- **OpenBLAS**: Installed from system packages or built from source
+- **AMD BLIS**: Built from source (https://github.com/amd/blis.git).
+- **Intel MKL**: Installed from Intel repositories.
+- **OpenBLAS**: Installed from system packages or built from source.
 
 To run:
 ```bash
@@ -160,32 +187,6 @@ The results directory contains:
 - **meta_data*.yml**: System metadata (CPU info, memory, NUMA topology, kernel version)
 - **PCP data** (if --use_pcp option used): Performance Co-Pilot monitoring data
 
-## Command-Line Options
-
-```
-Auto HPL Options:
-  --mem_size <value>: Designate the size of memory to work with (in GiB).
-      Overrides automatic memory detection. Useful for testing with reduced memory.
-  --sleep_between_runs <value>: Sleep this number of seconds before starting the next run.
-      Useful for allowing system to stabilize between iterations.
-  --use_mkl: Use Intel MKL library (Intel CPUs only).
-  --use_blis: Use AMD BLIS library (AMD CPUs only).
-  --regression: Limit the amount of memory for regression testing (uses N/4).
-
-General test_tools options:
-  --home_parent <value>: Parent home directory. If not set, defaults to current working directory.
-  --host_config <value>: Host configuration name, defaults to current hostname.
-  --iterations <value>: Number of times to run the test, defaults to 1.
-  --run_user: User that is actually running the test on the test system. Defaults to current user.
-  --sys_type: Type of system working with (aws, azure, hostname). Defaults to hostname.
-  --sysname: Name of the system running, used in determining config files. Defaults to hostname.
-  --tuned_setting: Used in naming the results directory. For RHEL, defaults to current active tuned profile.
-      For non-RHEL systems, defaults to 'none'.
-  --use_pcp: Enable Performance Co-Pilot monitoring during test execution.
-  --tools_git <value>: Git repo to retrieve the required tools from.
-      Default: https://github.com/redhat-performance/test_tools-wrappers
-  --usage: Display this usage message.
-```
 
 ## Examples
 
@@ -252,14 +253,14 @@ Uses AMD BLIS, runs 3 iterations with 256 GiB memory, and collects PCP data.
 The script automatically calculates optimal HPL parameters based on system hardware:
 
 ### Problem Size (N)
-1. Detects total system memory (or uses `--mem_size` value)
+1. Detects total system memory (or uses `--mem_size` value).
 2. Calculates N to use approximately 86% of memory:
    ```
    N = sqrt((memory_in_bytes) / 8) × 0.86
    ```
-   The factor of 8 accounts for double-precision floating-point (8 bytes)
-3. Rounds N down to nearest multiple of NB to avoid fragmentation
-4. If `--regression` is used, divides N by 4 for faster testing
+   The factor of 8 accounts for double-precision floating-point (8 bytes).
+3. Rounds N down to nearest multiple of NB to avoid fragmentation.
+4. If `--regression` is used, divides N by 4 for faster testing.
 
 ### Block Size (NB)
 Selected based on CPU family/model for optimal cache utilization:
@@ -275,13 +276,13 @@ Selected based on CPU family/model for optimal cache utilization:
 1. Determines number of MPI processes based on BLAS library:
    - **Multi-threaded BLAS** (BLIS-MT, OpenBLAS with OpenMP): Uses number of NUMA nodes or L3 caches
    - **Single-threaded BLAS**: Uses total number of cores
-2. Calculates P and Q to be as close as possible (square grid)
-3. Ensures P ≤ Q (HPL requirement)
-4. Algorithm: Start with sqrt(num_processes), then iterate down to find factors
+2. Calculates P and Q to be as close as possible (square grid).
+3. Ensures P ≤ Q (HPL requirement).
+4. Algorithm: Start with sqrt(num_processes), then iterate down to find factors.
 
 ### OpenMP Threads
-- For multi-threaded BLAS: Sets OMP_NUM_THREADS to cores per L3 cache
-- For single-threaded BLAS: OMP_NUM_THREADS=1
+- For multi-threaded BLAS: Sets OMP_NUM_THREADS to cores per L3 cache.
+- For single-threaded BLAS: OMP_NUM_THREADS=1.
 
 ## How MPI Configuration Works
 
@@ -292,8 +293,8 @@ The wrapper uses a centralized MPI setup library (`mpi_setup_lib.sh`) that handl
 - **RHEL 10+**: Direct PATH setup (`/usr/lib64/openmpi/bin`)
 
 ### Ubuntu
-- MPI binaries in `/usr/bin` (automatically in PATH)
-- Architecture-specific include paths: `/usr/lib/<arch>-linux-gnu/openmpi/include`
+- MPI binaries in `/usr/bin` (automatically in PATH).
+- Architecture-specific include paths: `/usr/lib/<arch>-linux-gnu/openmpi/include`.
 
 ### SLES
 - MPI installed in `/usr/lib64/mpi/gcc/openmpi*`
@@ -326,7 +327,7 @@ The wrapper integrates with the test_tools-wrappers framework:
 The script uses standardized error codes from test_tools error_codes:
 - **0**: Success
 - **101**: Git clone failure
-- **E_GENERAL**: General execution errors (build failures, library installation failures, test execution failures, validation failures)
+- **E_GENERAL**: General execution errors (build failures, library installation failures, test execution failures, validation failures).
 - **E_NO_ARGS**: Missing required arguments
 - **E_USAGE**: Invalid usage/arguments
 
@@ -335,38 +336,36 @@ Exit codes indicate specific failure points for automated testing workflows.
 ## Notes
 
 ### Architecture Support
-- **x86_64**: Full support for AMD and Intel CPUs with BLIS, MKL, or OpenBLAS
-- **aarch64**: Full support for ARM CPUs with OpenBLAS-OpenMP
-- **Other architectures**: Not currently supported
+- **x86_64**: Full support for AMD and Intel CPUs with BLIS, MKL, or OpenBLAS.
+- **aarch64**: Full support for ARM CPUs with OpenBLAS-OpenMP.
 
 ### BLAS Library Performance
-- AMD CPUs typically achieve best performance with AMD BLIS
-- Intel CPUs typically achieve best performance with Intel MKL
-- OpenBLAS is a good general-purpose option and works across all architectures
-- Multi-threaded BLAS libraries generally outperform single-threaded versions
+- AMD CPUs typically achieve best performance with AMD BLIS.
+- Intel CPUs typically achieve best performance with Intel MKL.
+- OpenBLAS is a good general-purpose option and works across all architectures.
+- Multi-threaded BLAS libraries generally outperform single-threaded versions.
 
 ### Memory Considerations
-- HPL requires memory proportional to N². A problem size of N=100,000 requires ~75 GiB
-- The wrapper uses 86% of memory by default, leaving headroom for OS and other processes
-- For systems with very large memory, consider using `--mem_size` to limit problem size
-- Memory bandwidth is often the limiting factor for HPL performance
+- HPL requires memory proportional to N². A problem size of N=100,000 requires ~75 GiB.
+- The wrapper uses 86% of memory by default, leaving headroom for OS and other processes.
+- For systems with very large memory, consider using `--mem_size` to limit problem size.
+- Memory bandwidth is often the limiting factor for HPL performance.
 
 ### Special Cases
-- **Amazon Linux 2**: OpenBLAS is compiled from source for better compatibility
-- **RHEL 9/10**: Uses FlexiBLAS wrapper with OpenBLAS backend (libopenblaso.so.0)
-- **Ampere eMag**: Uses MPI-only configuration (OMP_NUM_THREADS=1) for better performance
-- **Rosetta 2 on macOS ARM**: Currently not a target platform
+- **Amazon Linux 2**: OpenBLAS is compiled from source for better compatibility.
+- **RHEL 9/10**: Uses FlexiBLAS wrapper with OpenBLAS backend (libopenblaso.so.0).
+- **Ampere eMag**: Uses MPI-only configuration (OMP_NUM_THREADS=1) for better performance.
 
 ### Performance Tips
-- Run multiple iterations to verify consistency
-- Ensure system is idle (no other workloads) for best results
-- Disable CPU frequency scaling (use performance governor) for reproducible results
-- Consider the active tuned profile on RHEL systems
-- For production benchmarking, allow system to warm up with a test run first
+- Run multiple iterations to verify consistency.
+- Ensure system is idle (no other workloads) for best results.
+- Disable CPU frequency scaling (use performance governor) for reproducible results.
+- Consider the active tuned profile on RHEL systems.
+- For production benchmarking, allow system to warm up with a test run first.
 
 ### Troubleshooting
-- If HPL fails to build, check that all dependencies are installed
-- If mpirun is not found, verify MPI packages are installed for your OS
-- If performance is unexpectedly low, check CPU frequency and system load
-- Use `--use_pcp` to collect detailed performance counters for analysis
-- Check generated HPL.dat file to verify problem sizing is appropriate
+- If HPL fails to build, check that all dependencies are installed.
+- If mpirun is not found, verify MPI packages are installed for your OS.
+- If performance is unexpectedly low, check CPU frequency and system load.
+- Use `--use_pcp` to collect detailed performance counters for analysis.
+- Check generated HPL.dat file to verify problem sizing is appropriate.
