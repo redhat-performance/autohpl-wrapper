@@ -162,19 +162,6 @@ Where:
 
 The actual computation is: `(2/3 × N³ + 2 × N²) / time` floating-point operations per second.
 
-## Results Schema
-
-The wrapper validates results using a Pydantic schema that requires:
-- **TV**: String describing test variant/status
-- **N**: Integer problem size > 0
-- **NB**: Integer block size > 0
-- **P**: Integer row process count > 0
-- **Q**: Integer column process count > 0
-- **Time**: Float execution time > 0 (seconds)
-- **Gflops**: Float performance > 0 (billions of FLOPS)
-- **Start_Date**: Datetime timestamp
-- **End_Date**: Datetime timestamp
-
 ## Output Files
 
 The results directory contains:
@@ -305,22 +292,6 @@ The wrapper optimizes MPI process binding based on cache topology:
 - **Systems with L3 cache**: `--map-by l3cache`
 - **Systems without L3 cache info**: `--map-by numa`
 - **Single-threaded BLAS**: `--bind-to core`
-
-## Integration with test_tools
-
-The wrapper integrates with the test_tools-wrappers framework:
-
-- **csv_to_json**: Converts results to JSON format
-- **detect_numa**: Detects NUMA node configuration
-- **detect_os**: Identifies operating system and version
-- **gather_data**: Collects system information
-- **general_setup**: Parses common options, handles tuned profile detection
-- **move_data**: Organizes output files
-- **package_tool**: Installs required packages based on JSON configuration
-- **pcp/pcp_commands.inc**: Performance Co-Pilot integration
-- **save_results**: Archives results to configured storage
-- **test_header_info**: Generates CSV headers with system metadata
-- **verify_results**: Validates against Pydantic schema
 
 ## Return Codes
 
