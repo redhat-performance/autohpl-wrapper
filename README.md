@@ -335,7 +335,7 @@ Exit codes indicate specific failure points for automated testing workflows.
 - For production benchmarking, allow system to warm up with a test run first.
 
 ### Troubleshooting
-- If HPL fails to build, check that all dependencies are installed.
+- If HPL fails to build, verify that all dependencies are installed.
 - If mpirun is not found, verify MPI packages are installed for your OS.
 - If performance is unexpectedly low, check CPU frequency and system load.
 - Use `--use_pcp` to collect detailed performance counters for analysis.
