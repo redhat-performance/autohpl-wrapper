@@ -103,7 +103,7 @@ The `build_run_hpl.sh` script performs the following workflow:
     - Uses csv_to_json and verify_results from test_tools.
 
 11. **Output**:
-    - Creates timestamped results directory: `results_auto_hpl_<tuned_setting>_<YYYYMMDDHHMMSS>`.
+    - Creates timestamped results directory in `${HOME}/export_results/auto_hpl_<YYYY.MM.DD-HH.MM.SS>`
     - Saves all raw output files, processed CSV/JSON, and system metadata.
     - Optionally saves PCP performance data.
     - Archives results to configured storage location.
@@ -153,7 +153,7 @@ Where:
    - AMD Naples: 232
    - AMD Rome/Milan/Genoa: 224
    - AMD Bergamo: 384
-   - Intel (all models): 256
+   - Intel (default): 256
    - ARM (default): 256
 
 3. **P and Q (Process Grid)**: The number of MPI processes in the row and column dimensions. P × Q = total MPI processes. The wrapper calculates P and Q to be as close as possible (creating a square grid) while satisfying P ≤ Q.
