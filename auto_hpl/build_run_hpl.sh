@@ -292,21 +292,16 @@ size_platform()
 		NS=$((NS / 4))
 	fi
 	if [[ "$arch" == "x86_64" ]]; then
-		if [[ $family -eq 23 && $model -eq 1 ]]; then
-			# AMD Naples
-			NBS=232
-		elif [[ $family -eq 23 && $model -eq  49 ]]; then
-			# AMD Rome
+		if [[ $family -eq 23 || $family -eq 25 || $family -eq 26 ]]; then
+			# AMD defaults to 224, but there are overrides for some platforms
 			NBS=224
-		elif [[ $family -eq 25 && $model -eq 1 ]]; then
-			# AMD Milan
-			NBS=224
-		elif [[ $family -eq 25 && $model -eq 17 ]]; then
-			# AMD Genoa
-			NBS=224
-   		elif [[ $family -eq 25 && $model -eq 160 ]]; then
-     			# AMD Bergamo
-			NBS=384
+			if [[ $family -eq 23 && $model -eq 1 ]]; then
+				# AMD Naples
+				NBS=232
+			elif [[ $family -eq 25 && $model -eq 160 ]]; then
+				# AMD Bergamo
+				NBS=384
+			fi
 		elif [[ $family -eq 6 ]]; then
 			# Intel
 			NBS=256
