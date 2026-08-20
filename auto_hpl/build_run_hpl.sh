@@ -668,9 +668,12 @@ run_hpl()
 	for i in $(seq "$NUM_ITER")
 	do
 		$MPI_PATH/bin/mpirun --allow-run-as-root -np $num_mpi --mca btl self,vader --report-bindings $bind_settings ./xhpl 2>&1 > hpl.out
-		cat hpl.out | grep -E "WC|WR"  >> $outfile
+		# We have to add "-a" to grep because occasionally mpirun will
+		# emit a null first character which makes grep think the file
+		# is binary.
+		cat hpl.out | grep -a -E "WC|WR"  >> $outfile
 		if [[ $to_use_pcp -eq 1 ]]; then
-			hpl_result_line=$(grep -E "WC|WR" hpl.out)
+			hpl_result_line=$(grep -a -E "WC|WR" hpl.out)
 			if [[ -n "$hpl_result_line" ]]; then
 				read time_val gflops_val <<< $(echo "$hpl_result_line" | awk '{print $(NF-1), $NF}')
 				results2pcp_multiple "iteration:${i},numthread:${NOMP},hpl_time:${time_val},hpl_gflops:${gflops_val}"
