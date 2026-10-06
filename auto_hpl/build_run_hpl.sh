@@ -461,7 +461,14 @@ check_mpi()
 	# Verify mpirun is available
 	which mpirun > /dev/null 2>&1
 	if [ $? -ne 0 ]; then
-		exit_out "Error: mpirun not in path after setup" $E_GENERAL
+		pushd / >& /dev/null
+		mpi_location=$(find . -print | grep mpirun$ | sed "s/\.//g" | rev | cut -d/ -f2- | rev)
+		export PATH=$PATH:${mpi_location}
+		which mpirun > /dev/null 2>&1
+		if [ $? -ne 0 ]; then
+			exit_out "Error: mpirun not in path after setup" $E_GENERAL
+		fi
+		popd >& /dev/null
 	fi
 }
 
@@ -514,6 +521,15 @@ build_blis()
 
 build_hpl()
 {
+	#
+	# Find libmpi.so.40 and copy it to /usr/lib64/libmpi.so.40
+	#
+	if [[ ! -f /usr/lib64/libmpi.so.40 ]]; then
+		pushd / >& /dev/null
+		libmpi_loca=$(find . -print | grep libmpi.so.40.40.7)
+		cp $libmpi_loca /usr/lib64/libmpi.so.40
+		popd >& /dev/null
+	fi
 	echo "Get xHPL code. Change the HPL_LINK and HPL_VER variables suitably for required version"
 	cd $SCRIPT_DIR
   
@@ -557,18 +573,16 @@ build_hpl()
 			mpi_inc="/usr/include/openmpi"
 		fi
 	else
-		# RHEL, Amazon Linux use include path
-		case "$arch" in
-			x86_64)
-				mpi_inc="/usr/include/openmpi-x86_64"
-				;;
-			aarch64)
-				mpi_inc="/usr/include/openmpi-aarch64"
-				;;
-			*)
-				mpi_inc="/usr/include/openmpi"
-				;;
-		esac
+		#
+		# Locate which directory mpi.h resides in, that becomes the location
+		# for mpi_inc.
+		#
+		pushd / >& /dev/null
+		mpi_inc=$(find . -print | grep /mpi.h$ | sed "s/\.//g" | rev | cut -d'/' -f2- | rev)
+		if [[ $mpi_inc == "" ]]; then
+			exit_out "Error: unable to find libmpi.so.40." $E_GENERAL
+		fi
+		popd >& /dev/null
 	fi
 
 	# Choose base template makefile and set BLAS library name
@@ -660,14 +674,14 @@ run_hpl()
 	fi
 	echo "bind_settings=$bind_settings"
 
-	echo  "$MPI_PATH/bin/mpirun --allow-run-as-root -np $num_mpi --mca btl self,vader --report-bindings $bind_settings ./xhpl"
-	echo  "$MPI_PATH/bin/mpirun --allow-run-as-root -np $num_mpi --mca btl self,vader --report-bindings $bind_settings ./xhpl" > $outfile
+	echo  "mpirun --allow-run-as-root -np $num_mpi --mca btl self,vader --report-bindings $bind_settings ./xhpl"
+	echo  "mpirun --allow-run-as-root -np $num_mpi --mca btl self,vader --report-bindings $bind_settings ./xhpl" > $outfile
 
 	echo "     TV           N    NB     P     Q               Time                 Gflops"  >> $outfile
 	start_time=$(retrieve_time_stamp)
 	for i in $(seq "$NUM_ITER")
 	do
-		$MPI_PATH/bin/mpirun --allow-run-as-root -np $num_mpi --mca btl self,vader --report-bindings $bind_settings ./xhpl 2>&1 > hpl.out
+		mpirun --allow-run-as-root -np $num_mpi --mca btl self,vader --report-bindings $bind_settings ./xhpl 2>&1 > hpl.out
 		# We have to add "-a" to grep because occasionally mpirun will
 		# emit a null first character which makes grep think the file
 		# is binary.
@@ -734,7 +748,14 @@ install_run_hpl()
 		# Verify mpirun is available
 		which mpirun > /dev/null 2>&1
 		if [ $? -ne 0 ]; then
-			exit_out "Error: mpirun not in path after MPI setup" $E_GENERAL
+			pushd / >& /dev/null
+			mpi_location=$(find . -print | grep mpirun$ | sed "s/\.//g" | rev | cut -d/ -f2- | rev)
+			export PATH=$PATH:${mpi_location}
+			which mpirun > /dev/null 2>&1
+			if [ $? -ne 0 ]; then
+				exit_out "Error: mpirun not in path after setup" $E_GENERAL
+			fi
+			popd >&/dev/null
 		fi
 	fi
 
